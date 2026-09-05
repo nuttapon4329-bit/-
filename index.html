@@ -245,8 +245,7 @@
 
     <!-- Script ควบคุมสมุดและการซิงค์ Google Sheets -->
     <script>
-        // ⚠️ เปลี่ยนลิงก์ด้านล่างนี้ให้เป็น URL ของ Google Apps Script Web App ของคุณ
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyxcNDWzFeCrnH3SUSzDRyaaFu3G_an9jDEUpdriQnLPBMYf6e3rOoD6c0mB7Ic9uRdXQ/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxyxcNDWzFeCrnH3SUSzDRyaaFu3G_an9jDEUpdriQnLBPMYf6e3rOoD6c0mb7Ic9uRdXQ/exec';
 
         let pages = [createEmptyPage()];
         let currentPageIndex = 0;
@@ -266,7 +265,6 @@
             };
         }
 
-        // ดึงข้อมูลจาก Google Sheets ทันทีเมื่อเปิดเว็บ (ทุกเครื่องจะเห็นเหมือนกัน)
         async function loadFromCloud() {
             const statusEl = document.getElementById('syncStatus');
             try {
@@ -288,7 +286,6 @@
                 statusEl.innerText = "🔴 ใช้โหมดออฟไลน์ (Local)";
                 statusEl.style.color = "red";
                 
-                // สำรองโหลดจาก localStorage ถ้าต่อเน็ตไม่ได้
                 const localPages = localStorage.getItem('journal_pages');
                 if (localPages) pages = JSON.parse(localPages);
                 const localIndex = localStorage.getItem('journal_current_page');
@@ -300,7 +297,6 @@
             renderPage();
         }
 
-        // ส่งข้อมูลบันทึกขึ้น Google Sheets (เซลล์ A1) แบบอัตโนมัติ
         async function saveToCloud() {
             if (!isCloudLoaded) return;
 
@@ -333,7 +329,6 @@
                 statusEl.style.color = "red";
             }
 
-            // สำรองเก็บใน localStorage ของเครื่องไว้ด้วย
             localStorage.setItem('journal_pages', JSON.stringify(pages));
             localStorage.setItem('journal_current_page', currentPageIndex);
             localStorage.setItem('journal_techniques', JSON.stringify(techniques));
@@ -410,10 +405,9 @@
             page.notes = document.getElementById('additionalNotes').value;
             
             clearTimeout(window.saveTimer);
-            window.saveTimer = setTimeout(saveToCloud, 1000); // หน่วงเวลา 1 วิ ป้องกันการยิงเซิร์ฟเวอร์ถี่เกินไป
+            window.saveTimer = setTimeout(saveToCloud, 1000);
         }
 
-        // จัดการ Modal จัดการเทคนิค
         function openTechniqueModal() {
             renderModalTechniqueList();
             document.getElementById('techniqueModal').classList.remove('hidden');
@@ -498,6 +492,7 @@
             }
         }
 
+        // ฟังก์ชันอัปโหลดรูปภาพใหม่ที่รองรับการบันทึกลง Google Drive
         function previewImage(event) {
             const reader = new FileReader();
             reader.onload = function(){
@@ -506,7 +501,7 @@
                 output.classList.remove('hidden');
                 pages[currentPageIndex].image = reader.result;
                 renderPage();
-                saveToCloud();
+                saveToCloud(); // จะทำการอัปโหลดขึ้น Drive และบันทึกลง Sheet ทันที
             };
             if(event.target.files[0]) {
                 reader.readAsDataURL(event.target.files[0]);
@@ -597,7 +592,6 @@
             }
         }
 
-        // เริ่มต้นโหลดข้อมูลจาก Cloud เมื่อเปิดเว็บ
         window.onload = function() {
             loadFromCloud();
         };
