@@ -3,187 +3,605 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>บันทึกการสังเกตกราฟทอง</title>
+    <title>บันทึกการสังเกตกราฟทอง - Multi-Page Journal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font (Prompt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f4f1ea; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: #fffdf9; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; }
-        .status-bar { text-align: right; font-size: 14px; margin-bottom: 10px; font-weight: bold; color: #555; }
-        .section-title { font-weight: bold; margin-top: 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
-        .form-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
-        input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        input[type="date"] { width: 150px; }
-        .input-group { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; width: 100%; }
-        .input-group input { flex-grow: 1; }
-        .image-box { border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 6px; background: #faf8f5; color: #777; margin-bottom: 15px; cursor: pointer; }
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #26211c;
+        }
+        .vintage-notebook {
+            background-color: #f7f3e8;
+            background-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 27px,
+                #e8dfce 27px,
+                #e8dfce 28px
+            );
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .notebook-margin-line {
+            border-left: 2px solid #e89898;
+            padding-left: 1.5rem;
+        }
+        .classic-input {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #d4c5b2;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .classic-input:focus {
+            border-color: #bfa15f;
+            background-color: #ffffff;
+            outline: none;
+        }
+        .aspect-16-9 {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+        }
+        .chart-image-fit {
+            object-fit: contain;
+            background-color: #1e1e1e;
+        }
     </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col justify-between items-center py-4 px-2">
 
-<div class="container">
-    <!-- สถานะการซิงค์ -->
-    <div id="syncStatus" class="status-bar">⚪ กำลังเชื่อมต่อ...</div>
-
-    <div class="form-row">
-        <label><b>Date :</b></label>
-        <input type="date" id="dateInput">
-    </div>
-
-    <h2>บันทึกการสังเกตกราฟทอง ⭐</h2>
-
-    <div class="form-row">
-        <span>เทคนิค</span>
-        <select id="techSelect">
-            <option value="SMC">SMC</option>
-            <option value="Price Action">Price Action</option>
-            <option value="Supply & Demand">Supply & Demand</option>
-        </select>
-        <span>TF</span>
-        <select id="tfSelect">
-            <option value="1m">1m</option>
-            <option value="5m">5m</option>
-            <option value="15m">15m</option>
-            <option value="1h">1h</option>
-        </select>
-    </div>
-
-    <div class="section-title">📊 รูปกราฟที่สังเกต (ย้อนหลัง / Backtest)</div>
-    <div class="image-box" onclick="document.getElementById('imageInput').click()">
-        คลิกเพื่ออัปโหลดหรือวางรูปกราฟ 16:9
-        <input type="file" id="imageInput" accept="image/*" style="display:none">
-    </div>
-    <div id="imagePreviewContainer" style="margin-bottom: 15px; text-align: center;"></div>
-
-    <div class="section-title">📍 จุดสังเกต</div>
-    <div id="observationList">
-        <div class="input-group"><span>1.</span><input type="text" class="obs-item" placeholder="กรอกจุดสังเกต..."></div>
-        <div class="input-group"><span>2.</span><input type="text" class="obs-item" placeholder="กรอกจุดสังเกต..."></div>
-        <div class="input-group"><span>3.</span><input type="text" class="obs-item" placeholder="กรอกจุดสังเกต..."></div>
-    </div>
-
-    <div class="section-title">⚠️ จุดระวัง</div>
-    <div id="warningList">
-        <div class="input-group"><span>1.</span><input type="text" class="warn-item" placeholder="กรอกจุดระวัง..."></div>
-    </div>
-
-    <div class="section-title">📝 บันทึกเพิ่มเติม</div>
-    <textarea id="noteInput" rows="4" style="width: 100%;" placeholder="บันทึกรายละเอียดเพิ่มเติม..."></textarea>
-</div>
-
-<script>
-    // ⚠️ ใส่ URL ของ Google Apps Script ของคุณที่นี่เครื่องหมายคำพูด (Keep quotes)
-    const WEB_APP_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
-
-    let isLoaded = false;
-
-    // 1. โหลดข้อมูลจาก Google Sheets ทันทีเมื่อเปิดเว็บ (ทุกเครื่องจะเห็นข้อมูลตรงกัน)
-    window.addEventListener('DOMContentLoaded', async () => {
-        const statusEl = document.getElementById('syncStatus');
-        try {
-            statusEl.innerText = "⏳ กำลังโหลดข้อมูล...";
-            let response = await fetch(WEB_APP_URL);
-            let data = await response.json();
-
-            if (data && typeof data === 'object') {
-                if (data.date) document.getElementById('dateInput').value = data.date;
-                if (data.tech) document.getElementById('techSelect').value = data.tech;
-                if (data.tf) document.getElementById('tfSelect').value = data.tf;
-                if (data.note) document.getElementById('noteInput').value = data.note;
-                if (data.imageBase64) {
-                    document.getElementById('imagePreviewContainer').innerHTML = `<img src="${data.imageBase64}" style="max-width:100%; border-radius:6px;">`;
-                }
-
-                // โหลดจุดสังเกต
-                if (Array.isArray(data.observations)) {
-                    const obsInputs = document.querySelectorAll('.obs-item');
-                    data.observations.forEach((val, index) => {
-                        if (obsInputs[index]) obsInputs[index].value = val;
-                    });
-                }
-
-                // โหลดจุดระวัง
-                if (Array.isArray(data.warnings)) {
-                    const warnInputs = document.querySelectorAll('.warn-item');
-                    data.warnings.forEach((val, index) => {
-                        if (warnInputs[index]) warnInputs[index].value = val;
-                    });
-                }
-            }
-
-            statusEl.innerText = "🟢 ซิงค์ข้อมูลกับ Google Sheets สำเร็จ";
-            statusEl.style.color = "green";
-            isLoaded = true;
-        } catch (error) {
-            console.error("Load error:", error);
-            statusEl.innerText = "🔴 โหลดข้อมูลไม่สำเร็จ";
-            statusEl.style.color = "red";
-            isLoaded = true;
-        }
-    });
-
-    // 2. ฟังก์ชันส่งข้อมูลไปบันทึกที่ Google Sheets แบบ Real-time เมื่อมีการเปลี่ยนแปลง
-    async function saveData() {
-        if (!isLoaded) return; // ป้องกันการบันทึกทับข้อมูลตอนกำลังโหลดครั้งแรก
-
-        const statusEl = document.getElementById('syncStatus');
-        statusEl.innerText = "💾 กำลังบันทึก...";
-        statusEl.style.color = "orange";
-
-        // รวบรวมข้อมูลทั้งหมดในหน้าเว็บ
-        const observations = Array.from(document.querySelectorAll('.obs-item')).map(input => input.value);
-        const warnings = Array.from(document.querySelectorAll('.warn-item')).map(input => input.value);
-        const imgEl = document.querySelector('#imagePreviewContainer img');
+    <!-- หน้ากระดาษสมุดหลัก -->
+    <div class="w-full max-w-[98vw] vintage-notebook rounded-t-xl flex flex-col relative p-5 md:p-8 notebook-margin-line">
         
-        const payload = {
-            date: document.getElementById('dateInput').value,
-            tech: document.getElementById('techSelect').value,
-            tf: document.getElementById('tfSelect').value,
-            note: document.getElementById('noteInput').value,
-            observations: observations,
-            warnings: warnings,
-            imageBase64: imgEl ? imgEl.src : ''
-        };
+        <!-- สถานะซิงค์ข้อมูล Cloud -->
+        <div id="syncStatus" class="absolute top-2 right-4 text-xs font-semibold text-gray-500 bg-white/80 px-2 py-0.5 rounded shadow-sm">
+            ⚪ กำลังเชื่อมต่อ...
+        </div>
 
-        try {
-            let response = await fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-            let result = await response.json();
+        <!-- ส่วนหัว: Date, Title, เทคนิค, TF -->
+        <div class="flex flex-wrap items-center justify-between border-b-2 border-[#dcd0bd] pb-3 mb-4 gap-3 bg-[#f7f3e8]/90 backdrop-blur-xs mt-2">
+            
+            <!-- ฝั่งซ้าย: Date และ Title -->
+            <div class="flex items-center space-x-4 flex-wrap gap-y-2">
+                <div class="flex items-center space-x-2 text-[#5c5346] font-medium text-sm">
+                    <span>Date :</span>
+                    <input type="date" id="pageDate" class="classic-input px-2.5 py-1 rounded text-xs text-[#4a4237] font-semibold" oninput="saveCurrentPageData()">
+                </div>
+                <div class="flex items-center space-x-1.5">
+                    <h1 class="text-lg md:text-xl font-bold text-[#3b3328] tracking-wide">บันทึกการสังเกตกราฟทอง</h1>
+                    <span class="text-amber-500 text-base">⭐</span>
+                </div>
+            </div>
 
-            if (result.status === 'success') {
-                statusEl.innerText = "🟢 บันทึกข้อมูลลง Google Sheets เรียบร้อย";
-                statusEl.style.color = "green";
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error) {
-            console.error("Save error:", error);
-            statusEl.innerText = "🔴 บันทึกไม่สำเร็จ";
-            statusEl.style.color = "red";
-        }
-    }
+            <!-- ฝั่งขวา: เทคนิค, ปุ่มเปิดจัดการเทคนิค, TF -->
+            <div class="flex items-center space-x-3 text-xs md:text-sm flex-wrap gap-y-2">
+                <div class="flex flex-col space-y-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[#5c5346] font-medium">เทคนิค</span>
+                        <button onclick="openTechniqueModal()" class="text-amber-800 hover:text-amber-900 text-xs font-semibold cursor-pointer">+ จัดการเทคนิค</button>
+                    </div>
+                    <select id="techniqueSelect" class="classic-input px-2.5 py-1.5 rounded-lg text-[#4a4237] min-w-[200px]" onchange="saveCurrentPageData()">
+                        <!-- ตัวเลือกดรอปดาวน์ -->
+                    </select>
+                </div>
 
-    // จัดการอัปโหลดรูปภาพแปลงเป็น Base64 เพื่อเก็บลง Sheets ได้ทันที
-    document.getElementById('imageInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(uploadEvent) {
-                document.getElementById('imagePreviewContainer').innerHTML = `<img src="${uploadEvent.target.result}" style="max-width:100%; border-radius:6px;">`;
-                saveData(); // บันทึกอัตโนมัติหลังใส่รูป
+                <div class="flex flex-col space-y-1">
+                    <span class="text-[#5c5346] font-medium">TF</span>
+                    <select id="tfSelect" class="classic-input px-2.5 py-1.5 rounded-lg text-[#4a4237] font-bold" onchange="saveCurrentPageData()">
+                        <option value="1m">1m</option>
+                        <option value="3m">3m</option>
+                        <option value="5m">5m</option>
+                        <option value="15m" selected>15m</option>
+                        <option value="30m">30m</option>
+                        <option value="1h">1h</option>
+                        <option value="4h">4h</option>
+                        <option value="D">D</option>
+                        <option value="W">W</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ส่วนเนื้อหาหลัก แบ่ง 2 คอลัมน์ -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- คอลัมน์ซ้าย: รูปกราฟที่สังเกต (สัดส่วน 16:9) -->
+            <div class="lg:col-span-7 flex flex-col space-y-2 bg-[#f7f3e8]/90 p-1 rounded-lg">
+                <h2 class="text-[#3b3328] font-semibold text-sm flex items-center space-x-2">
+                    <span class="w-1.5 h-3.5 bg-amber-600 rounded-full"></span>
+                    <span>รูปกราฟที่สังเกต (ย้อนหลัง / Backtest)</span>
+                </h2>
+                
+                <div class="border-2 border-[#d4c5b2] bg-[#fffcf5] rounded-xl p-2.5 shadow-md relative">
+                    <div class="w-full bg-[#ffffff] rounded border border-[#e8e1d5] overflow-hidden flex flex-col">
+                        <div class="relative aspect-16-9 bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
+                            <label class="cursor-pointer flex flex-col items-center space-y-2 text-gray-500 hover:text-amber-700 transition p-4 text-center">
+                                <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span class="text-xs font-medium">คลิกเพื่ออัปโหลดหรือวางรูปกราฟ 16:9</span>
+                                <input type="file" accept="image/*" class="hidden" onchange="previewImage(event)">
+                            </label>
+                            <img id="uploadedImage" class="absolute inset-0 w-full h-full chart-image-fit hidden" alt="Uploaded Chart">
+                        </div>
+                        <div class="p-1.5 text-[11px] text-gray-400 flex justify-between items-center bg-[#faf8f5] border-t border-gray-100">
+                            <span>Observation Chart (16:9)</span>
+                            <span>Mode: Analysis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- คอลัมน์ขวา: จุดสังเกต / จุดระวัง / บันทึกเพิ่มเติม -->
+            <div class="lg:col-span-5 flex flex-col space-y-4 bg-[#f7f3e8]/90 p-1 rounded-lg">
+                
+                <!-- จุดสังเกต -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-[#3b3328] font-semibold text-sm flex items-center space-x-2">
+                            <span class="w-1.5 h-3.5 bg-amber-600 rounded-full"></span>
+                            <span>จุดสังเกต <span class="text-[11px] text-[#736757] font-normal">(พิมพ์บันทึกเอง)</span></span>
+                        </h2>
+                        <span class="text-amber-500 text-xs">⭐</span>
+                    </div>
+
+                    <div id="observationList" class="space-y-1.5"></div>
+
+                    <div>
+                        <button onclick="addObservationItem()" class="text-amber-800 hover:text-amber-900 text-xs font-semibold px-2.5 py-1 bg-[#f4ebd0] rounded border border-[#d4c5b2] transition shadow-xs cursor-pointer">
+                            + เพิ่มจุดสังเกต
+                        </button>
+                    </div>
+                </div>
+
+                <!-- จุดระวัง -->
+                <div class="space-y-2 pt-1">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-[#3b3328] font-semibold text-sm flex items-center space-x-2">
+                            <span class="w-1.5 h-3.5 bg-amber-600 rounded-full"></span>
+                            <span>จุดระวัง <span class="text-[11px] text-[#736757] font-normal">(พิมพ์บันทึกเอง)</span></span>
+                        </h2>
+                        <span class="text-amber-600 text-xs">⚠️</span>
+                    </div>
+
+                    <div id="warningList" class="space-y-1.5"></div>
+
+                    <div>
+                        <button onclick="addWarningItem()" class="text-amber-800 hover:text-amber-900 text-xs font-semibold px-2.5 py-1 bg-[#f4ebd0] rounded border border-[#d4c5b2] transition shadow-xs cursor-pointer">
+                            + เพิ่มจุดระวัง
+                        </button>
+                    </div>
+                </div>
+
+                <!-- บันทึกเพิ่มเติม -->
+                <div class="space-y-1.5 pt-1">
+                    <h2 class="text-[#3b3328] font-semibold text-xs">บันทึกเพิ่มเติม</h2>
+                    <textarea id="additionalNotes" rows="6" placeholder="เขียนสรุปการบ้านหรือข้อคิดเห็นเพิ่มเติมจากการสังเกตรูปนี้..." class="w-full border border-dashed border-[#c7b59b] bg-[#fffdf9] rounded-lg p-2.5 text-[#5c5346] text-xs shadow-inner resize-none focus:outline-none focus:border-amber-600" oninput="saveCurrentPageData()"></textarea>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ส่วนท้ายสมุด -->
+        <div class="mt-4 pt-3 border-t-2 border-[#dcd0bd] flex justify-between items-center">
+            <span class="text-[11px] text-[#8c806f] italic">Gold Chart Backtesting & Observation Journal</span>
+            <span id="pageIndicator" class="text-xs font-semibold text-[#5c5346] bg-[#efe7d6] px-2.5 py-0.5 rounded-full border border-[#d4c5b2]">หน้า 1 / 1</span>
+        </div>
+
+    </div>
+
+    <!-- แถบควบคุมการเปลี่ยนหน้าสมุด -->
+    <div class="w-full max-w-[98vw] flex flex-wrap justify-between items-center bg-[#1f1a16] px-5 py-3 rounded-b-xl border-x border-b border-[#423a31] gap-3 shadow-2xl mb-4">
+        <div class="flex items-center space-x-2">
+            <button onclick="prevPage()" class="bg-[#3a322b] hover:bg-[#4d4239] text-[#f7f3e8] px-4 py-2 rounded-lg text-xs font-medium border border-[#5c5043] transition shadow cursor-pointer">
+                ◀ หน้าก่อนหน้า
+            </button>
+            <button onclick="nextPage()" class="bg-[#3a322b] hover:bg-[#4d4239] text-[#f7f3e8] px-4 py-2 rounded-lg text-xs font-medium border border-[#5c5043] transition shadow cursor-pointer">
+                หน้าถัดไป ▶
+            </button>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="addNewPage()" class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition flex items-center space-x-1 cursor-pointer">
+                <span>+ เพิ่มหน้าใหม่</span>
+            </button>
+            <button onclick="deleteCurrentPage()" class="bg-red-900/90 hover:bg-red-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow transition cursor-pointer">
+                ลบทิ้งหน้านี้
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal สำหรับจัดการเทคนิค -->
+    <div id="techniqueModal" class="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 hidden">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col space-y-4 mx-4">
+            
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-base font-bold text-gray-800 flex items-center space-x-2">
+                    <span>📖</span>
+                    <span>จัดการเทคนิคการเทรด</span>
+                </h3>
+                <button onclick="closeTechniqueModal()" class="text-gray-400 hover:text-gray-600 text-lg font-bold px-2 cursor-pointer">✕</button>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <input type="text" id="newTechniqueInput" placeholder="กรอกชื่อเทคนิคใหม่..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-amber-600">
+                <button onclick="addNewTechniqueFromModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap">
+                    + เพิ่มเทคนิค
+                </button>
+            </div>
+
+            <div class="flex flex-col space-y-1">
+                <span class="text-xs text-gray-500 font-medium">รายการเทคนิคทั้งหมด:</span>
+                <div id="modalTechniqueList" class="max-h-60 overflow-y-auto space-y-2 pr-1"></div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeTechniqueModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script ควบคุมสมุดและการซิงค์ Google Sheets -->
+    <script>
+        // ⚠️ เปลี่ยนลิงก์ด้านล่างนี้ให้เป็น URL ของ Google Apps Script Web App ของคุณ
+        const WEB_APP_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+
+        let pages = [createEmptyPage()];
+        let currentPageIndex = 0;
+        let techniques = ["Smart Money Concept (SMC)", "Price Action", "Supply & Demand"];
+        let isCloudLoaded = false;
+
+        function createEmptyPage() {
+            const today = new Date().toISOString().split('T')[0];
+            return {
+                date: today,
+                technique: "",
+                tf: "15m",
+                image: "",
+                observations: ["", "", "", "", ""],
+                warnings: ["", "", ""],
+                notes: ""
             };
-            reader.readAsDataURL(file);
         }
-    });
 
-    // สั่งบันทึกอัตโนมัติทุกครั้งที่มีการพิมพ์หรือเปลี่ยนค่าฟอร์ม
-    document.querySelectorAll('input, select, textarea').forEach(element => {
-        element.addEventListener('input', () => {
+        // ดึงข้อมูลจาก Google Sheets ทันทีเมื่อเปิดเว็บ (ทุกเครื่องจะเห็นเหมือนกัน)
+        async function loadFromCloud() {
+            const statusEl = document.getElementById('syncStatus');
+            try {
+                statusEl.innerText = "⏳ กำลังโหลด...";
+                let response = await fetch(WEB_APP_URL);
+                let cloudData = await response.json();
+
+                if (cloudData && cloudData.pages && Array.isArray(cloudData.pages) && cloudData.pages.length > 0) {
+                    pages = cloudData.pages;
+                    currentPageIndex = cloudData.currentPageIndex || 0;
+                    if (cloudData.techniques && Array.isArray(cloudData.techniques)) {
+                        techniques = cloudData.techniques;
+                    }
+                }
+                statusEl.innerText = "🟢 ซิงค์สำเร็จ";
+                statusEl.style.color = "green";
+            } catch (error) {
+                console.error("Load cloud error:", error);
+                statusEl.innerText = "🔴 ใช้โหมดออฟไลน์ (Local)";
+                statusEl.style.color = "red";
+                
+                // สำรองโหลดจาก localStorage ถ้าต่อเน็ตไม่ได้
+                const localPages = localStorage.getItem('journal_pages');
+                if (localPages) pages = JSON.parse(localPages);
+                const localIndex = localStorage.getItem('journal_current_page');
+                if (localIndex) currentPageIndex = parseInt(localIndex);
+                const localTech = localStorage.getItem('journal_techniques');
+                if (localTech) techniques = JSON.parse(localTech);
+            }
+            isCloudLoaded = true;
+            renderPage();
+        }
+
+        // ส่งข้อมูลบันทึกขึ้น Google Sheets (เซลล์ A1) แบบอัตโนมัติ
+        async function saveToCloud() {
+            if (!isCloudLoaded) return;
+
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.innerText = "💾 กำลังบันทึก...";
+            statusEl.style.color = "orange";
+
+            const payload = {
+                pages: pages,
+                currentPageIndex: currentPageIndex,
+                techniques: techniques
+            };
+
+            try {
+                let response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                let result = await response.json();
+
+                if (result.status === 'success') {
+                    statusEl.innerText = "🟢 บันทึกลง Sheets แล้ว";
+                    statusEl.style.color = "green";
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error("Save cloud error:", error);
+                statusEl.innerText = "🔴 บันทึกไม่สำเร็จ";
+                statusEl.style.color = "red";
+            }
+
+            // สำรองเก็บใน localStorage ของเครื่องไว้ด้วย
+            localStorage.setItem('journal_pages', JSON.stringify(pages));
+            localStorage.setItem('journal_current_page', currentPageIndex);
+            localStorage.setItem('journal_techniques', JSON.stringify(techniques));
+        }
+
+        function renderTechniqueDropdown(selectedVal = "") {
+            const select = document.getElementById('techniqueSelect');
+            select.innerHTML = '<option value="">เลือกเทคนิค...</option>';
+            techniques.forEach(tech => {
+                const option = document.createElement('option');
+                option.value = tech;
+                option.text = tech;
+                if (tech === selectedVal) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+        function renderPage() {
+            if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
+            if (currentPageIndex < 0) currentPageIndex = 0;
+
+            const page = pages[currentPageIndex];
+
+            document.getElementById('pageDate').value = page.date || "";
+            renderTechniqueDropdown(page.technique || "");
+            document.getElementById('tfSelect').value = page.tf || "15m";
+            document.getElementById('additionalNotes').value = page.notes || "";
+
+            const imgElement = document.getElementById('uploadedImage');
+            if (page.image) {
+                imgElement.src = page.image;
+                imgElement.classList.remove('hidden');
+            } else {
+                imgElement.src = "";
+                imgElement.classList.add('hidden');
+            }
+
+            const obsList = document.getElementById('observationList');
+            obsList.innerHTML = "";
+            page.observations.forEach((item, index) => {
+                const div = document.createElement("div");
+                div.className = "flex items-center space-x-2 item-row";
+                div.innerHTML = `
+                    <span class="text-xs text-[#736757] w-4 text-right font-semibold num-label">${index + 1}.</span>
+                    <input type="text" value="${item}" placeholder="กรอกจุดสังเกตจากกราฟ..." class="flex-1 classic-input text-xs px-2.5 py-1.5 rounded text-[#3b3328] placeholder-[#a69c8b]" oninput="updateObservationText(${index}, this.value)">
+                    <button onclick="removeObservationItem(${index})" class="text-[#a69c8b] hover:text-red-600 text-sm font-bold px-1 cursor-pointer">×</button>
+                `;
+                obsList.appendChild(div);
+            });
+
+            const warnList = document.getElementById('warningList');
+            warnList.innerHTML = "";
+            page.warnings.forEach((item, index) => {
+                const div = document.createElement("div");
+                div.className = "flex items-center space-x-2 warn-row";
+                div.innerHTML = `
+                    <span class="text-xs text-[#736757] w-4 text-right font-semibold warn-num">${index + 1}.</span>
+                    <input type="text" value="${item}" placeholder="กรอกจุดที่ต้องระวังจากกราฟ..." class="flex-1 classic-input text-xs px-2.5 py-1.5 rounded text-[#3b3328] placeholder-[#a69c8b]" oninput="updateWarningText(${index}, this.value)">
+                    <button onclick="removeWarningItem(${index})" class="text-[#a69c8b] hover:text-red-600 text-sm font-bold px-1 cursor-pointer">×</button>
+                `;
+                warnList.appendChild(div);
+            });
+
+            document.getElementById('pageIndicator').textContent = `หน้า ${currentPageIndex + 1} / ${pages.length}`;
+        }
+
+        function saveCurrentPageData() {
+            const page = pages[currentPageIndex];
+            page.date = document.getElementById('pageDate').value;
+            page.technique = document.getElementById('techniqueSelect').value;
+            page.tf = document.getElementById('tfSelect').value;
+            page.notes = document.getElementById('additionalNotes').value;
+            
             clearTimeout(window.saveTimer);
-            window.saveTimer = setTimeout(saveData, 1000); // หน่วงเวลา 1 วิ เพื่อไม่ให้ยิงรัวเกินไป
-        });
-    });
-</script>
+            window.saveTimer = setTimeout(saveToCloud, 1000); // หน่วงเวลา 1 วิ ป้องกันการยิงเซิร์ฟเวอร์ถี่เกินไป
+        }
+
+        // จัดการ Modal จัดการเทคนิค
+        function openTechniqueModal() {
+            renderModalTechniqueList();
+            document.getElementById('techniqueModal').classList.remove('hidden');
+        }
+
+        function closeTechniqueModal() {
+            document.getElementById('techniqueModal').classList.add('hidden');
+            renderTechniqueDropdown(pages[currentPageIndex].technique);
+            saveToCloud();
+        }
+
+        function renderModalTechniqueList() {
+            const listContainer = document.getElementById('modalTechniqueList');
+            listContainer.innerHTML = "";
+
+            if (techniques.length === 0) {
+                listContainer.innerHTML = '<div class="text-xs text-gray-400 text-center py-3">ยังไม่มีรายการเทคนิค</div>';
+                return;
+            }
+
+            techniques.forEach((tech, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex items-center justify-between bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-xs";
+                itemDiv.innerHTML = `
+                    <span class="font-medium text-gray-800">${tech}</span>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="editTechnique(${index})" class="text-blue-600 hover:text-blue-800 font-medium cursor-pointer px-1.5 py-0.5 bg-blue-50 rounded border border-blue-200">แก้ไข</button>
+                        <button onclick="deleteTechnique(${index})" class="text-red-600 hover:text-red-800 font-medium cursor-pointer px-1.5 py-0.5 bg-red-50 rounded border border-red-200">ลบ</button>
+                    </div>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        function addNewTechniqueFromModal() {
+            const input = document.getElementById('newTechniqueInput');
+            const val = input.value.trim();
+            if (!val) {
+                alert("กรุณากรอกชื่อเทคนิคใหม่");
+                return;
+            }
+            if (techniques.includes(val)) {
+                alert("มีชื่อเทคนิคนี้อยู่แล้วในระบบ");
+                return;
+            }
+
+            techniques.push(val);
+            input.value = "";
+            renderModalTechniqueList();
+            saveToCloud();
+        }
+
+        function editTechnique(index) {
+            const oldVal = techniques[index];
+            const newVal = prompt(`แก้ไขชื่อเทคนิค "${oldVal}" เป็น:`, oldVal);
+            if (newVal && newVal.trim() !== "") {
+                const trimmed = newVal.trim();
+                if (techniques.includes(trimmed)) {
+                    alert("ชื่อเทคนิคนี้มีอยู่แล้ว");
+                    return;
+                }
+                techniques[index] = trimmed;
+                pages.forEach(p => {
+                    if (p.technique === oldVal) p.technique = trimmed;
+                });
+                renderModalTechniqueList();
+                renderPage();
+                saveToCloud();
+            }
+        }
+
+        function deleteTechnique(index) {
+            const target = techniques[index];
+            if (confirm(`คุณต้องการลบเทคนิค "${target}" ออกจากระบบใช่หรือไม่?`)) {
+                techniques.splice(index, 1);
+                pages.forEach(p => {
+                    if (p.technique === target) p.technique = "";
+                });
+                renderModalTechniqueList();
+                renderPage();
+                saveToCloud();
+            }
+        }
+
+        function previewImage(event) {
+            const reader = new FileReader();
+            reader.onload = function(){
+                const output = document.getElementById('uploadedImage');
+                output.src = reader.result;
+                output.classList.remove('hidden');
+                pages[currentPageIndex].image = reader.result;
+                renderPage();
+                saveToCloud();
+            };
+            if(event.target.files[0]) {
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        }
+
+        function updateObservationText(index, value) {
+            pages[currentPageIndex].observations[index] = value;
+            saveToCloud();
+        }
+        function addObservationItem() {
+            pages[currentPageIndex].observations.push("");
+            renderPage();
+            saveToCloud();
+        }
+        function removeObservationItem(index) {
+            pages[currentPageIndex].observations.splice(index, 1);
+            renderPage();
+            saveToCloud();
+        }
+
+        function updateWarningText(index, value) {
+            pages[currentPageIndex].warnings[index] = value;
+            saveToCloud();
+        }
+        function addWarningItem() {
+            pages[currentPageIndex].warnings.push("");
+            renderPage();
+            saveToCloud();
+        }
+        function removeWarningItem(index) {
+            pages[currentPageIndex].warnings.splice(index, 1);
+            renderPage();
+            saveToCloud();
+        }
+
+        function nextPage() {
+            saveCurrentPageData();
+            if (currentPageIndex < pages.length - 1) {
+                currentPageIndex++;
+                renderPage();
+                saveToCloud();
+            } else {
+                alert("นี่คือหน้าสุดท้ายแล้ว กดปุ่ม '+ เพิ่มหน้าใหม่' ด้านล่างเพื่อสร้างหน้าถัดไปครับ");
+            }
+        }
+
+        function prevPage() {
+            saveCurrentPageData();
+            if (currentPageIndex > 0) {
+                currentPageIndex--;
+                renderPage();
+                saveToCloud();
+            } else {
+                alert("นี่คือหน้าแรกสุดแล้วครับ");
+            }
+        }
+
+        function addNewPage() {
+            saveCurrentPageData();
+            pages.push(createEmptyPage());
+            currentPageIndex = pages.length - 1;
+            renderPage();
+            saveToCloud();
+        }
+
+        function deleteCurrentPage() {
+            if (pages.length === 1) {
+                alert("ไม่สามารถลบหน้าสุดท้ายของสมุดได้ครับ");
+                return;
+            }
+
+            const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
+            const enteredCode = prompt(`รหัสยืนยันเพื่อลบหน้านี้คือ: [ ${randomCode} ]\n\nกรุณากรอกรหัส 4 ตัวนี้ให้ถูกต้อง:`);
+            if (enteredCode === null) return;
+
+            if (enteredCode.trim() === randomCode) {
+                if (confirm(`ยืนยันการลบหน้า ${currentPageIndex + 1} ถาวร?`)) {
+                    pages.splice(currentPageIndex, 1);
+                    if (currentPageIndex >= pages.length) {
+                        currentPageIndex = pages.length - 1;
+                    }
+                    renderPage();
+                    saveToCloud();
+                }
+            } else {
+                alert("รหัสผ่านไม่ถูกต้อง! ยกเลิกการลบหน้า");
+            }
+        }
+
+        // เริ่มต้นโหลดข้อมูลจาก Cloud เมื่อเปิดเว็บ
+        window.onload = function() {
+            loadFromCloud();
+        };
+    </script>
 
 </body>
 </html>
