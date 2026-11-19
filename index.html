@@ -1,639 +1,1419 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>โปรแกรมคำนวณการแบ่งค่าใช้จ่ายรายเดือน</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Prompt', 'Inter', 'sans-serif'],
-            num: ['Inter', 'Prompt', 'sans-serif']
-          },
-          colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0369a1'
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณการแบ่งค่าใช้จ่ายรายเดือน</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Prompt & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Inter', 'sans-serif'],
+                        num: ['Inter', 'Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  </script>
-  <style>
-    body {
-      background-color: #f8fafc;
-      color: #1e293b;
-    }
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type="number"] {
-      -moz-appearance: textfield;
-    }
-  </style>
+    </script>
+    <style>
+        /* Custom Scrollbar & Smooth Transitions */
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            -webkit-tap-highlight-color: transparent;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .card-shadow {
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+        }
+        .toast-enter {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="antialiased pb-16">
+<body class="min-h-screen pb-16">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-sm">
-          <i data-lucide="pie-chart" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <h1 class="text-base sm:text-lg font-bold text-slate-800 leading-tight">โปรแกรมคำนวณการแบ่งค่าใช้จ่ายรายเดือน</h1>
-          <p id="sheetStatus" class="text-[11px] text-slate-500">พร้อมใช้งาน • เชื่อมต่อ Google Sheets แล้ว</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <select id="monthSelector" onchange="switchMonth(this.value)"
-          class="bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
-        </select>
-        <button type="button" onclick="addNewMonth()"
-          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg transition">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i> เพิ่มเดือน
-        </button>
-        <button type="button" onclick="toggleHistoryModal(true)"
-          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
-          <i data-lucide="history" class="w-3.5 h-3.5"></i> ประวัติย้อนหลัง
-        </button>
-        <button type="button" id="btnSaveSheet" onclick="saveToSheet()"
-          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition">
-          <i data-lucide="save" class="w-3.5 h-3.5"></i> บันทึกลงชีท
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
-
-    <!-- Top Row: Income Left + Total Summary Right -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-      <!-- Income Card -->
-      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col justify-between">
-        <div>
-          <label for="incomeInput" class="block text-sm font-semibold text-slate-700 mb-2">รายได้เดือนนี้ (บาท)</label>
-          <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-lg">฿</span>
-            <input type="text" id="incomeInput" inputmode="decimal" placeholder="0"
-              class="w-full pl-10 pr-4 py-3 text-2xl font-bold font-num text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
-          </div>
-        </div>
-
-        <div class="mt-4 pt-3 border-t border-slate-100">
-          <div class="flex items-center justify-between text-xs mb-1.5">
-            <span class="text-slate-500 font-medium">สัดส่วนรวมทุกหมวด</span>
-            <span id="percentTotalText" class="font-bold font-num text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">100%</span>
-          </div>
-          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div id="percentBar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 100%"></div>
-          </div>
-          <p id="percentHint" class="text-[11px] text-slate-500 mt-1.5">แบ่งครบ 100% พอดี</p>
-        </div>
-      </div>
-
-      <!-- Summary Card -->
-      <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col justify-between">
-        <div class="flex items-start justify-between gap-2">
-          <div>
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">สรุปยอดคงเหลือรวมทั้งหมด</span>
-            <div id="totalRemainingDisplay" class="text-3xl sm:text-4xl font-bold font-num text-emerald-600 mt-1">฿0</div>
-            <p id="totalRemainingNote" class="text-xs text-slate-500 mt-1">คำนวณจากรายได้หักรายการจ่ายจริงทั้งหมด</p>
-          </div>
-          <button type="button" onclick="copySummary()"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition shrink-0">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> คัดลอกสรุป
-          </button>
-        </div>
-
-        <div class="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-slate-100">
-          <div class="bg-slate-50 rounded-xl p-3">
-            <div class="text-[11px] text-slate-500">รายได้ทั้งหมด</div>
-            <div id="sumIncomeText" class="text-sm sm:text-base font-bold font-num text-slate-800 mt-0.5">฿0</div>
-          </div>
-          <div class="bg-slate-50 rounded-xl p-3">
-            <div class="text-[11px] text-slate-500">รายการจ่ายรวม</div>
-            <div id="sumExpenseText" class="text-sm sm:text-base font-bold font-num text-rose-600 mt-0.5">฿0</div>
-          </div>
-          <div class="bg-slate-50 rounded-xl p-3">
-            <div class="text-[11px] text-slate-500">ยอดที่จัดสรรตาม %</div>
-            <div id="sumAllocatedText" class="text-sm sm:text-base font-bold font-num text-brand-700 mt-0.5">฿0</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Main 4+ Categories -->
-    <section class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-bold text-slate-800">หัวข้อการแบ่งเงินและรายการที่ต้องจ่าย</h2>
-        <button type="button" onclick="addCategory()"
-          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg transition">
-          <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i> เพิ่มหัวข้อ
-        </button>
-      </div>
-      <div id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
-    </section>
-
-  </main>
-
-  <!-- History Modal -->
-  <div id="historyModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-slate-800">ประวัติย้อนหลังรายเดือน</h3>
-          <p class="text-xs text-slate-500">ดูยอดรับ ยอดใช้จ่าย และยอดคงเหลือแต่ละเดือน (คลิกเดือนเพื่อเปิดดูรายละเอียด)</p>
-        </div>
-        <button type="button" onclick="toggleHistoryModal(false)" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="p-5 overflow-y-auto space-y-4">
-        <div class="grid grid-cols-3 gap-3">
-          <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div class="text-[11px] text-slate-500">รับรวมทุกเดือน</div>
-            <div id="histAllIncome" class="text-sm sm:text-base font-bold font-num text-slate-800 mt-0.5">฿0</div>
-          </div>
-          <div class="p-3 rounded-xl bg-rose-50/60 border border-rose-100">
-            <div class="text-[11px] text-rose-600">ใช้รวมทุกเดือน</div>
-            <div id="histAllExpense" class="text-sm sm:text-base font-bold font-num text-rose-600 mt-0.5">฿0</div>
-          </div>
-          <div class="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100">
-            <div class="text-[11px] text-emerald-700">เหลือรวมทุกเดือน</div>
-            <div id="histAllRemaining" class="text-sm sm:text-base font-bold font-num text-emerald-700 mt-0.5">฿0</div>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto border border-slate-200/80 rounded-xl">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-slate-50 text-slate-600 text-xs border-b border-slate-200">
-              <tr>
-                <th class="py-2.5 px-4">เดือน</th>
-                <th class="py-2.5 px-4 text-right">รับ</th>
-                <th class="py-2.5 px-4 text-right">ใช้</th>
-                <th class="py-2.5 px-4 text-right">เหลือ</th>
-              </tr>
-            </thead>
-            <tbody id="historyRows" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlp825lesOH8y7B6mxyizIJX2qzzOAL_Nj8XeXEDFxKHNedvrQzXkYXQtkdAIGSuEWJw/exec";
-    const STORAGE_KEY = "expense_allocator_data_v1";
-    const THAI_MONTHS = [
-      "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-      "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-    ];
-
-    function getCurrentYM() {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    }
-
-    function formatYM(ym) {
-      const [y, m] = String(ym).split("-");
-      const idx = parseInt(m, 10) - 1;
-      const thaiY = parseInt(y, 10) + 543;
-      return (THAI_MONTHS[idx] && !isNaN(thaiY)) ? `${THAI_MONTHS[idx]} ${thaiY}` : String(ym);
-    }
-
-    function createDefaultCategories() {
-      return [
-        { id: "save", name: "แบ่งเก็บ", percent: 20, items: [] },
-        { id: "use",  name: "แบ่งใช้",  percent: 40, items: [] },
-        { id: "debt", name: "แบ่งผ่อน", percent: 20, items: [] },
-        { id: "pay",  name: "แบ่งจ่าย", percent: 20, items: [] }
-      ];
-    }
-
-    function formatBath(num) {
-      const n = Number(num) || 0;
-      const sign = n < 0 ? "-" : "";
-      return sign + "฿" + Math.abs(Math.round(n)).toLocaleString("en-US");
-    }
-
-    function escapeAttr(str) {
-      return String(str ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
-    let state = {
-      currentMonth: getCurrentYM(),
-      months: {}
-    };
-
-    function loadLocal() {
-      try {
-        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-        if (raw && raw.months && typeof raw.months === "object") {
-          state = raw;
-        }
-      } catch (e) {}
-
-      if (!state.months[state.currentMonth]) {
-        state.months[state.currentMonth] = {
-          monthId: state.currentMonth,
-          label: formatYM(state.currentMonth),
-          income: 0,
-          categories: createDefaultCategories()
-        };
-      }
-    }
-
-    function saveLocal() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) {}
-    }
-
-    function setStatus(msg) {
-      const el = document.getElementById("sheetStatus");
-      if (el) el.textContent = msg;
-    }
-
-    function renderMonthSelect() {
-      const sel = document.getElementById("monthSelector");
-      const keys = Object.keys(state.months).sort().reverse();
-      sel.innerHTML = keys.map(k =>
-        `<option value="${escapeAttr(k)}" ${k === state.currentMonth ? "selected" : ""}>${escapeAttr(state.months[k].label || formatYM(k))}</option>`
-      ).join("");
-    }
-
-    function renderAll() {
-      try {
-        renderMonthSelect();
-        const cur = state.months[state.currentMonth];
-        const income = Number(cur.income) || 0;
-
-        const incomeInput = document.getElementById("incomeInput");
-        if (document.activeElement !== incomeInput) {
-          incomeInput.value = income > 0 ? income.toLocaleString("en-US") : "";
-        }
-
-        let totalPercent = 0;
-        let totalAllocated = 0;
-        let totalExpense = 0;
-
-        const grid = document.getElementById("categoriesGrid");
-        grid.innerHTML = "";
-
-        cur.categories.forEach(cat => {
-          const pct = Number(cat.percent) || 0;
-          const allocated = (income * pct) / 100;
-          const spent = (cat.items || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-          const remaining = allocated - spent;
-
-          totalPercent += pct;
-          totalAllocated += allocated;
-          totalExpense += spent;
-
-          const card = document.createElement("div");
-          card.className = "bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col justify-between";
-          card.innerHTML = `
-            <div>
-              <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
-                <input type="text" value="${escapeAttr(cat.name)}" onchange="updateCategoryName('${escapeAttr(cat.id)}', this.value)"
-                  class="text-base font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none flex-1">
-                <div class="flex items-center gap-1.5">
-                  <div class="flex items-center bg-brand-50 border border-brand-200 text-brand-700 rounded-lg px-2.5 py-1">
-                    <input type="number" min="0" max="100" value="${pct}" onchange="updateCategoryPercent('${escapeAttr(cat.id)}', this.value)"
-                      class="w-11 text-right font-bold font-num text-sm bg-transparent focus:outline-none">
-                    <span class="text-xs font-bold ml-1">%</span>
-                  </div>
-                  ${cur.categories.length > 1 ? `
-                    <button type="button" onclick="removeCategory('${escapeAttr(cat.id)}')" title="ลบหัวข้อ"
-                      class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition">
-                      <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>` : ""}
+    <!-- Top Navigation Bar -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                    <i data-lucide="wallet" class="w-5 h-5"></i>
                 </div>
-              </div>
-
-              <div class="grid grid-cols-3 gap-2 my-3.5 p-3 rounded-xl bg-slate-50 text-center">
-                <div>
-                  <div class="text-[11px] text-slate-500">ยอดตาม %</div>
-                  <div class="text-sm font-bold font-num text-slate-800 mt-0.5">${formatBath(allocated)}</div>
+                <div class="min-w-0">
+                    <h1 class="text-base sm:text-lg font-bold text-slate-800 leading-tight truncate">จัดสรรเงินรายเดือน</h1>
+                    <p class="text-[11px] sm:text-xs text-slate-500 hidden sm:block truncate">แบ่งเก็บ • แบ่งใช้ • แบ่งผ่อน • แบ่งจ่าย</p>
                 </div>
-                <div class="border-x border-slate-200/80">
-                  <div class="text-[11px] text-slate-500">รายการจ่าย</div>
-                  <div class="text-sm font-bold font-num text-rose-600 mt-0.5">${formatBath(spent)}</div>
-                </div>
-                <div>
-                  <div class="text-[11px] text-slate-500">คงเหลือ</div>
-                  <div class="text-sm font-bold font-num ${remaining < 0 ? "text-rose-600" : "text-emerald-600"} mt-0.5">${formatBath(remaining)}</div>
-                </div>
-              </div>
-
-              <div class="space-y-2 mb-3">
-                ${(cat.items || []).map(item => `
-                  <div class="flex items-center gap-2">
-                    <input type="text" value="${escapeAttr(item.name)}" placeholder="ชื่อรายการที่ต้องจ่าย..."
-                      onchange="updateItem('${escapeAttr(cat.id)}', '${escapeAttr(item.id)}', 'name', this.value)"
-                      class="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:bg-white focus:border-brand-500">
-                    <div class="relative w-32">
-                      <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">฿</span>
-                      <input type="number" value="${item.amount ? Number(item.amount) : ""}" placeholder="0"
-                        onchange="updateItem('${escapeAttr(cat.id)}', '${escapeAttr(item.id)}', 'amount', this.value)"
-                        class="w-full text-right font-num text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg pl-6 pr-2.5 py-1.5 focus:outline-none focus:bg-white focus:border-brand-500">
-                    </div>
-                    <button type="button" onclick="removeItem('${escapeAttr(cat.id)}', '${escapeAttr(item.id)}')" title="ลบรายการ"
-                      class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition">
-                      <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                  </div>
-                `).join("")}
-              </div>
             </div>
 
-            <button type="button" onclick="addItem('${escapeAttr(cat.id)}')"
-              class="w-full py-2 border border-dashed border-slate-300 hover:border-brand-500 hover:text-brand-600 text-slate-600 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> เพิ่มรายการที่ต้องจ่าย
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <select id="monthSelector" onchange="switchMonth(this.value)" class="px-2.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 transition" title="เลือกเดือน"></select>
+                <button type="button" onclick="openNewMonthModal()" class="px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-xl transition flex items-center gap-1.5" title="เพิ่มเดือนใหม่">
+                    <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+                    <span class="hidden lg:inline">เพิ่มเดือน</span>
+                </button>
+                <button type="button" onclick="openHistoryModal()" class="px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition flex items-center gap-1.5" title="ดูประวัติย้อนหลังรายเดือน">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                    <span class="hidden lg:inline">ประวัติย้อนหลัง</span>
+                </button>
+                <button type="button" id="btnSaveSheets" onclick="saveToGoogleSheets()" class="px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition flex items-center gap-1.5" title="บันทึกลง Google Sheets">
+                    <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                    <span class="hidden xl:inline">บันทึกลงชีท</span>
+                </button>
+                <button type="button" onclick="loadSampleData()" class="px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition flex items-center gap-1.5" title="โหลดข้อมูลตัวอย่างเพื่อทดลองใช้งาน">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    <span class="hidden md:inline">ตัวอย่างข้อมูล</span>
+                </button>
+                <button type="button" onclick="copySummaryText()" class="px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center gap-1.5" title="คัดลอกสรุปยอดเป็นข้อความ">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">คัดลอกสรุป</span>
+                </button>
+                <button type="button" onclick="openResetModal()" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition" title="ล้างข้อมูลทั้งหมด">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+
+        <!-- Section 1: Income Input & Overall Summary Dashboard -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left: Income Input & Percentage Allocation Status (5 cols) -->
+            <div class="lg:col-span-5 bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 card-shadow flex flex-col justify-between space-y-5">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="incomeInput" class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                            <i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i>
+                            รายได้เดือนนี้ (บาท)
+                        </label>
+                        <span id="sheetSyncStatus" class="text-xs text-slate-400">บันทึกอัตโนมัติ</span>
+                    </div>
+                    
+                    <div class="relative mt-1">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-lg">฿</span>
+                        <input 
+                            type="text" 
+                            id="incomeInput" 
+                            inputmode="decimal"
+                            placeholder="0"
+                            oninput="handleIncomeInput(this)"
+                            onblur="formatIncomeOnBlur(this)"
+                            class="w-full pl-10 pr-4 py-3.5 text-2xl sm:text-3xl font-bold font-num text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-sky-500 focus:bg-white transition"
+                        >
+                    </div>
+
+                    <!-- Quick Income Presets -->
+                    <div class="flex flex-wrap gap-1.5 mt-3">
+                        <button type="button" onclick="setQuickIncome(15000)" class="px-2.5 py-1 text-xs font-num font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">15,000</button>
+                        <button type="button" onclick="setQuickIncome(25000)" class="px-2.5 py-1 text-xs font-num font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">25,000</button>
+                        <button type="button" onclick="setQuickIncome(35000)" class="px-2.5 py-1 text-xs font-num font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">35,000</button>
+                        <button type="button" onclick="setQuickIncome(50000)" class="px-2.5 py-1 text-xs font-num font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">50,000</button>
+                        <button type="button" onclick="setQuickIncome(80000)" class="px-2.5 py-1 text-xs font-num font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">80,000</button>
+                    </div>
+                </div>
+
+                <!-- Percentage Allocation Bar -->
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-500">สัดส่วนการแบ่งเปอร์เซ็นต์รวม</span>
+                        <span id="totalPercentBadge" class="text-xs font-bold font-num px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                            100%
+                        </span>
+                    </div>
+                    
+                    <!-- Stacked Visual Bar -->
+                    <div id="percentStackedBar" class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex gap-0.5 p-0.5">
+                        <!-- Segments injected by JS -->
+                    </div>
+                    
+                    <p id="percentAlertMsg" class="text-xs mt-2 text-emerald-600 flex items-center gap-1">
+                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span>จัดสรรครบ 100% พอดีแล้ว</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right: Summary Metrics & Donut Chart (7 cols) -->
+            <div class="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 card-shadow flex flex-col justify-between">
+                <div class="flex flex-col sm:flex-row items-center gap-6 h-full">
+                    
+                    <!-- Donut Chart Container -->
+                    <div class="relative w-44 h-44 shrink-0 flex items-center justify-center">
+                        <svg id="donutChart" viewBox="0 0 100 100" class="w-full h-full -rotate-90 transform">
+                            <!-- Background circle -->
+                            <circle cx="50" cy="50" r="38" fill="transparent" stroke="#f1f5f9" stroke-width="14"></circle>
+                            <!-- Dynamic segments injected here -->
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                            <span class="text-[11px] text-slate-400 font-medium">รายจ่ายรวม</span>
+                            <span id="donutPercentUsed" class="text-lg font-bold font-num text-slate-800">0%</span>
+                            <span class="text-[10px] text-slate-400">ของรายได้</span>
+                        </div>
+                    </div>
+
+                    <!-- Summary Numbers Grid -->
+                    <div class="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <!-- Card 1: Total Allocated -->
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                            <div class="text-xs text-slate-500 mb-1 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                                ยอดจัดสรรตาม % รวม
+                            </div>
+                            <div id="summaryAllocated" class="text-lg sm:text-xl font-bold font-num text-slate-800">฿0.00</div>
+                            <div id="summaryUnallocatedHint" class="text-[11px] text-slate-400 mt-0.5">จากรายได้ทั้งหมด</div>
+                        </div>
+
+                        <!-- Card 2: Total Planned Expenses -->
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                            <div class="text-xs text-slate-500 mb-1 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                รายการที่ต้องจ่ายรวม
+                            </div>
+                            <div id="summaryTotalExpenses" class="text-lg sm:text-xl font-bold font-num text-slate-800">฿0.00</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">รวมทุกรายการย่อย</div>
+                        </div>
+
+                        <!-- Card 3: Net Remaining (Highlight) -->
+                        <div id="netRemainingCard" class="sm:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/70 flex items-center justify-between">
+                            <div>
+                                <div class="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                                    <i data-lucide="piggy-bank" class="w-4 h-4 text-emerald-600"></i>
+                                    ยอดคงเหลือสุทธิรวมทั้งหมด
+                                </div>
+                                <div class="text-[11px] text-emerald-600/80 mt-0.5">
+                                    (ผลรวมเงินคงเหลือของทุกหมวดหมู่)
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div id="summaryNetRemaining" class="text-2xl sm:text-3xl font-bold font-num text-emerald-700">฿0.00</div>
+                                <div id="summaryIncomeDiff" class="text-[11px] font-num text-emerald-600 mt-0.5">เทียบรายได้: ฿0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Categories Header & Add Category Button -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">หมวดหมู่การจัดสรรและรายการค่าใช้จ่าย</h2>
+                <p class="text-xs text-slate-500">ปรับสัดส่วน % และเพิ่มรายการย่อยในแต่ละหัวข้อเพื่อคำนวณเงินคงเหลือ</p>
+            </div>
+            <button type="button" onclick="addNewCategory()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-medium rounded-xl shadow-sm transition flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                เพิ่มหมวดหมู่ใหม่
             </button>
-          `;
-          grid.appendChild(card);
-        });
+        </div>
 
-        const totalRemaining = income - totalExpense;
-        document.getElementById("sumIncomeText").textContent = formatBath(income);
-        document.getElementById("sumExpenseText").textContent = formatBath(totalExpense);
-        document.getElementById("sumAllocatedText").textContent = formatBath(totalAllocated);
+        <!-- Section 3: Categories Grid (4 Default Categories + Custom) -->
+        <section id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Category Cards rendered dynamically by JavaScript -->
+        </section>
 
-        const remEl = document.getElementById("totalRemainingDisplay");
-        remEl.textContent = formatBath(totalRemaining);
-        remEl.className = `text-3xl sm:text-4xl font-bold font-num mt-1 ${totalRemaining < 0 ? "text-rose-600" : "text-emerald-600"}`;
+        <!-- Section 4: Breakdown Table Summary -->
+        <section class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 card-shadow overflow-hidden">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="table-properties" class="w-4 h-4 text-sky-500"></i>
+                ตารางสรุปยอดคงเหลือแยกตามหมวดหมู่
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500">
+                            <th class="py-3 px-3">หมวดหมู่</th>
+                            <th class="py-3 px-3 text-right">สัดส่วน</th>
+                            <th class="py-3 px-3 text-right">งบตาม % (บาท)</th>
+                            <th class="py-3 px-3 text-right">รายการที่จ่าย (บาท)</th>
+                            <th class="py-3 px-3 text-right">คงเหลือ (บาท)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                    <tfoot id="summaryTableFoot" class="bg-slate-50/80 font-bold text-slate-800 text-sm border-t-2 border-slate-200">
+                        <!-- Footer totals injected via JS -->
+                    </tfoot>
+                </table>
+            </div>
+        </section>
 
-        const pctText = document.getElementById("percentTotalText");
-        const pctBar = document.getElementById("percentBar");
-        const pctHint = document.getElementById("percentHint");
-        pctText.textContent = `${totalPercent}%`;
-        pctBar.style.width = `${Math.min(100, Math.max(0, totalPercent))}%`;
+    </main>
 
-        if (totalPercent === 100) {
-          pctText.className = "font-bold font-num text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full";
-          pctBar.className = "h-full bg-emerald-500 transition-all duration-300";
-          pctHint.textContent = "แบ่งครบ 100% พอดี";
-        } else {
-          pctText.className = "font-bold font-num text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full";
-          pctBar.className = "h-full bg-amber-500 transition-all duration-300";
-          pctHint.textContent = totalPercent < 100 ? `ยังแบ่งไม่ครบ (ขาดอีก ${100 - totalPercent}%)` : `แบ่งเกิน 100% (เกินมา ${totalPercent - 100}%)`;
+    <!-- Custom Confirmation Modal for Reset -->
+    <div id="resetModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">ล้างข้อมูลทั้งหมด?</h3>
+                <p class="text-sm text-slate-500 mt-1">ข้อมูลรายได้และรายการค่าใช้จ่ายของเดือนนี้จะถูกรีเซ็ตกลับเป็นค่าเริ่มต้น</p>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onclick="closeResetModal()" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">ยกเลิก</button>
+                <button type="button" onclick="confirmReset()" class="px-4 py-2.5 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition">ยืนยันล้างข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Adding New Month -->
+    <div id="newMonthModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center">
+                <i data-lucide="calendar-plus" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">เพิ่มเดือนใหม่</h3>
+                <p class="text-xs text-slate-500 mt-1">เลือกเดือนและปีที่ต้องการสร้างรายการจัดสรร</p>
+                <input type="month" id="newMonthPicker" class="mt-3 w-full px-3.5 py-2.5 text-sm font-num font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500">
+                <label class="mt-3 flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                    <input type="checkbox" id="copyStructureCheck" checked class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
+                    <span>คัดลอกหมวดหมู่และสัดส่วน % จากเดือนปัจจุบัน</span>
+                </label>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onclick="closeNewMonthModal()" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">ยกเลิก</button>
+                <button type="button" onclick="confirmAddMonth()" class="px-4 py-2.5 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition">สร้างเดือน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Monthly History -->
+    <div id="historyModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-xl border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="history" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-800">ประวัติย้อนหลังรายเดือน</h3>
+                        <p class="text-xs text-slate-500">ดูยอดรับ รายจ่ายจริง และยอดคงเหลือแต่ละเดือน (คลิกที่แถวเพื่อเปิดดูรายละเอียด)</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="loadFromGoogleSheets(true)" class="px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-xl transition flex items-center gap-1">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        <span>ดึงจากชีท</span>
+                    </button>
+                    <button type="button" onclick="closeHistoryModal()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div class="text-xs text-slate-500">รับรวมทุกเดือน</div>
+                        <div id="histAllIncome" class="text-lg font-bold font-num text-slate-800 mt-0.5">฿0.00</div>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-100">
+                        <div class="text-xs text-rose-600">ใช้จ่ายรวมทุกเดือน</div>
+                        <div id="histAllExpense" class="text-lg font-bold font-num text-rose-600 mt-0.5">฿0.00</div>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                        <div class="text-xs text-emerald-700">เหลือรวมทุกเดือน</div>
+                        <div id="histAllRemaining" class="text-lg font-bold font-num text-emerald-700 mt-0.5">฿0.00</div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-500">
+                                <th class="py-3 px-4">เดือน</th>
+                                <th class="py-3 px-4 text-right">รับ</th>
+                                <th class="py-3 px-4 text-right">ใช้</th>
+                                <th class="py-3 px-4 text-right">เหลือ</th>
+                                <th class="py-3 px-4 text-center">รายละเอียด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // --- Google Apps Script Web App URL ---
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlp825lesOH8y7B6mxyizIJX2qzzOAL_Nj8XeXEDFxKHNedvrQzXkYXQtkdAIGSuEWJw/exec';
+
+        // --- State & Color Palette Configuration ---
+        const COLOR_PALETTE = [
+            { id: 'emerald', name: 'เขียวมรกต', hex: '#10b981', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', iconBg: 'bg-emerald-500' },
+            { id: 'sky',     name: 'ฟ้าสดใส',   hex: '#0ea5e9', bg: 'bg-sky-50',     border: 'border-sky-200',     text: 'text-sky-700',     badge: 'bg-sky-100 text-sky-700',         bar: 'bg-sky-500',     iconBg: 'bg-sky-500' },
+            { id: 'amber',   name: 'ส้มอำพัน',   hex: '#f59e0b', bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700',   badge: 'bg-amber-100 text-amber-700',     bar: 'bg-amber-500',   iconBg: 'bg-amber-500' },
+            { id: 'violet',  name: 'ม่วงพาสเทล', hex: '#8b5cf6', bg: 'bg-violet-50',  border: 'border-violet-200',  text: 'text-violet-700',  badge: 'bg-violet-100 text-violet-700',   bar: 'bg-violet-500',  iconBg: 'bg-violet-500' },
+            { id: 'rose',    name: 'ชมพูโรส',   hex: '#f43f5e', bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-700',    badge: 'bg-rose-100 text-rose-700',       bar: 'bg-rose-500',    iconBg: 'bg-rose-500' },
+            { id: 'teal',    name: 'เขียวน้ำทะเล', hex: '#14b8a6', bg: 'bg-teal-50',   border: 'border-teal-200',    text: 'text-teal-700',    badge: 'bg-teal-100 text-teal-700',       bar: 'bg-teal-500',    iconBg: 'bg-teal-500' }
+        ];
+
+        const STORAGE_KEY = 'thai_monthly_budget_allocator_v1';
+        const THAI_MONTHS = [
+            'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+        ];
+
+        function getCurrentYM() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         }
 
-        if (window.lucide && typeof window.lucide.createIcons === "function") {
-          window.lucide.createIcons();
+        function formatThaiMonth(ym) {
+            try {
+                const [y, m] = String(ym).split('-');
+                const yearNum = parseInt(y, 10);
+                const monthIdx = parseInt(m, 10) - 1;
+                if (!isNaN(yearNum) && THAI_MONTHS[monthIdx]) {
+                    return `${THAI_MONTHS[monthIdx]} ${yearNum + 543}`;
+                }
+            } catch (e) {}
+            return String(ym);
         }
-      } catch (err) {
-        console.error(err);
-      }
-    }
 
-    document.getElementById("incomeInput").addEventListener("input", (e) => {
-      const clean = e.target.value.replace(/[^0-9.]/g, "");
-      const num = parseFloat(clean) || 0;
-      state.months[state.currentMonth].income = num;
-      saveLocal();
-      renderAll();
-    });
-
-    function updateCategoryName(catId, name) {
-      const cat = state.months[state.currentMonth].categories.find(c => c.id === catId);
-      if (cat) { cat.name = name; saveLocal(); }
-    }
-
-    function updateCategoryPercent(catId, pct) {
-      const cat = state.months[state.currentMonth].categories.find(c => c.id === catId);
-      if (cat) { cat.percent = parseFloat(pct) || 0; saveLocal(); renderAll(); }
-    }
-
-    function addCategory() {
-      const cur = state.months[state.currentMonth];
-      cur.categories.push({
-        id: "cat_" + Date.now(),
-        name: "หัวข้อใหม่",
-        percent: 0,
-        items: []
-      });
-      saveLocal();
-      renderAll();
-    }
-
-    function removeCategory(catId) {
-      const cur = state.months[state.currentMonth];
-      cur.categories = cur.categories.filter(c => c.id !== catId);
-      saveLocal();
-      renderAll();
-    }
-
-    function addItem(catId) {
-      const cat = state.months[state.currentMonth].categories.find(c => c.id === catId);
-      if (cat) {
-        cat.items = cat.items || [];
-        cat.items.push({ id: "item_" + Date.now(), name: "", amount: 0 });
-        saveLocal();
-        renderAll();
-      }
-    }
-
-    function updateItem(catId, itemId, field, value) {
-      const cat = state.months[state.currentMonth].categories.find(c => c.id === catId);
-      const item = cat?.items?.find(i => i.id === itemId);
-      if (item) {
-        item[field] = field === "amount" ? (parseFloat(value) || 0) : value;
-        saveLocal();
-        renderAll();
-      }
-    }
-
-    function removeItem(catId, itemId) {
-      const cat = state.months[state.currentMonth].categories.find(c => c.id === catId);
-      if (cat) {
-        cat.items = (cat.items || []).filter(i => i.id !== itemId);
-        saveLocal();
-        renderAll();
-      }
-    }
-
-    function switchMonth(ym) {
-      if (!state.months[ym]) return;
-      state.currentMonth = ym;
-      saveLocal();
-      renderAll();
-    }
-
-    function addNewMonth() {
-      const input = prompt("กรอกเดือนและปีที่ต้องการเพิ่ม (รูปแบบ YYYY-MM เช่น 2026-12):", getCurrentYM());
-      if (!input) return;
-      const ym = input.trim();
-      if (!/^\d{4}-\d{2}$/.test(ym)) {
-        alert("กรุณากรอกรูปแบบ YYYY-MM เช่น 2026-12");
-        return;
-      }
-      if (!state.months[ym]) {
-        const cur = state.months[state.currentMonth];
-        state.months[ym] = {
-          monthId: ym,
-          label: formatYM(ym),
-          income: Number(cur.income) || 0,
-          categories: (cur.categories || createDefaultCategories()).map(c => ({
-            id: c.id,
-            name: c.name,
-            percent: Number(c.percent) || 0,
-            items: []
-          }))
-        };
-      }
-      state.currentMonth = ym;
-      saveLocal();
-      renderAll();
-    }
-
-    function copySummary() {
-      const cur = state.months[state.currentMonth];
-      const income = Number(cur.income) || 0;
-      let totalExp = 0;
-      const lines = [`สรุปงบประมาณ ${cur.label}`, `รายได้: ${formatBath(income)}`];
-
-      cur.categories.forEach(cat => {
-        const alloc = (income * (Number(cat.percent) || 0)) / 100;
-        const spent = (cat.items || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
-        const rem = alloc - spent;
-        totalExp += spent;
-        lines.push(`• ${cat.name} (${cat.percent}%): งบ ${formatBath(alloc)} | จ่าย ${formatBath(spent)} | เหลือ ${formatBath(rem)}`);
-      });
-
-      lines.push(`รวมใช้จ่ายจริง: ${formatBath(totalExp)}`);
-      lines.push(`คงเหลือรวมทั้งหมด: ${formatBath(income - totalExp)}`);
-
-      navigator.clipboard?.writeText(lines.join("\n"));
-      setStatus("คัดลอกสรุปยอดเรียบร้อยแล้ว");
-    }
-
-    function toggleHistoryModal(show) {
-      const modal = document.getElementById("historyModal");
-      if (show) {
-        renderHistory();
-        modal.classList.remove("hidden");
-      } else {
-        modal.classList.add("hidden");
-      }
-      if (window.lucide) window.lucide.createIcons();
-    }
-
-    function renderHistory() {
-      const tbody = document.getElementById("historyRows");
-      const keys = Object.keys(state.months).sort().reverse();
-      let allInc = 0, allExp = 0, allRem = 0;
-
-      tbody.innerHTML = keys.map(k => {
-        const m = state.months[k];
-        const inc = Number(m.income) || 0;
-        const exp = (m.categories || []).reduce((s, c) => s + (c.items || []).reduce((si, i) => si + (Number(i.amount) || 0), 0), 0);
-        const rem = inc - exp;
-        allInc += inc;
-        allExp += exp;
-        allRem += rem;
-
-        return `
-          <tr onclick="switchMonth('${escapeAttr(k)}'); toggleHistoryModal(false);" class="hover:bg-slate-50 cursor-pointer">
-            <td class="py-2.5 px-4 font-semibold text-slate-800">${escapeAttr(m.label || formatYM(k))}</td>
-            <td class="py-2.5 px-4 text-right font-num text-slate-700">${formatBath(inc)}</td>
-            <td class="py-2.5 px-4 text-right font-num text-rose-600">${formatBath(exp)}</td>
-            <td class="py-2.5 px-4 text-right font-num font-bold ${rem < 0 ? "text-rose-600" : "text-emerald-600"}">${formatBath(rem)}</td>
-          </tr>
-        `;
-      }).join("");
-
-      document.getElementById("histAllIncome").textContent = formatBath(allInc);
-      document.getElementById("histAllExpense").textContent = formatBath(allExp);
-      document.getElementById("histAllRemaining").textContent = formatBath(allRem);
-    }
-
-    async function saveToSheet() {
-      const btn = document.getElementById("btnSaveSheet");
-      btn.disabled = true;
-      setStatus("กำลังบันทึกลง Google Sheets...");
-
-      const cur = state.months[state.currentMonth];
-      const inc = Number(cur.income) || 0;
-      const totalExpense = (cur.categories || []).reduce((s, c) => s + (c.items || []).reduce((si, i) => si + (Number(i.amount) || 0), 0), 0);
-
-      try {
-        const res = await fetch(SCRIPT_URL, {
-          method: "POST",
-          redirect: "follow",
-          body: JSON.stringify({
-            monthId: cur.monthId,
-            monthLabel: cur.label || formatYM(cur.monthId),
-            income: inc,
-            totalExpense: totalExpense,
-            netBalance: inc - totalExpense,
-            payload: cur
-          })
-        });
-        const json = await res.json();
-        if (json.status === "success") {
-          setStatus(`บันทึกลงชีทแล้ว (${json.updatedAt || "สำเร็จ"})`);
-        } else {
-          setStatus("บันทึกไม่สำเร็จ: " + (json.message || "ตรวจสอบ Apps Script"));
+        function buildMonthState(monthId, income = 30000, withSampleItems = true) {
+            return {
+                monthId: monthId,
+                monthLabel: formatThaiMonth(monthId),
+                income: income,
+                categories: [
+                    {
+                        id: 'cat-save',
+                        name: 'แบ่งเก็บ',
+                        subtitle: 'เงินออม / ลงทุน / ฉุกเฉิน',
+                        icon: 'piggy-bank',
+                        colorId: 'emerald',
+                        percent: 20,
+                        items: withSampleItems ? [
+                            { id: 'item-1', name: 'ออมเงินฉุกเฉิน', amount: 4000 },
+                            { id: 'item-2', name: 'กองทุนรวม / สลากออมสิน', amount: 2000 }
+                        ] : []
+                    },
+                    {
+                        id: 'cat-use',
+                        name: 'แบ่งใช้',
+                        subtitle: 'ค่ากินอยู่ / เดินทาง / ส่วนตัว',
+                        icon: 'shopping-bag',
+                        colorId: 'sky',
+                        percent: 30,
+                        items: withSampleItems ? [
+                            { id: 'item-3', name: 'ค่าอาหารรายวัน', amount: 6000 },
+                            { id: 'item-4', name: 'ค่าเดินทาง / น้ำมัน', amount: 2000 }
+                        ] : []
+                    },
+                    {
+                        id: 'cat-installment',
+                        name: 'แบ่งผ่อน',
+                        subtitle: 'ผ่อนบ้าน / รถ / บัตรเครดิต',
+                        icon: 'credit-card',
+                        colorId: 'amber',
+                        percent: 25,
+                        items: withSampleItems ? [
+                            { id: 'item-5', name: 'ผ่อนโทรศัพท์ / สินค้า 0%', amount: 3500 }
+                        ] : []
+                    },
+                    {
+                        id: 'cat-bills',
+                        name: 'แบ่งจ่าย',
+                        subtitle: 'ค่าน้ำ / ค่าไฟ / ค่าเน็ต / ประกัน',
+                        icon: 'receipt',
+                        colorId: 'violet',
+                        percent: 25,
+                        items: withSampleItems ? [
+                            { id: 'item-6', name: 'ค่าเช่าห้อง / ส่วนกลาง', amount: 5500 },
+                            { id: 'item-7', name: 'ค่าน้ำ + ค่าไฟ + ค่าเน็ต', amount: 1500 }
+                        ] : []
+                    }
+                ]
+            };
         }
-      } catch (err) {
-        setStatus("บันทึกลงเครื่องแล้ว (เชื่อมต่อชีทไม่ได้ - ตรวจสิทธิ์ Web App)");
-      } finally {
-        btn.disabled = false;
-      }
-    }
 
-    async function loadFromSheet() {
-      setStatus("กำลังซิงก์ข้อมูลจาก Google Sheets...");
-      try {
-        const res = await fetch(SCRIPT_URL, { redirect: "follow" });
-        const json = await res.json();
-        if (json.status === "success" && Array.isArray(json.data)) {
-          json.data.forEach(row => {
-            if (row && row.monthId && row.payload) {
-              state.months[row.monthId] = row.payload;
+        const DEFAULT_STATE = buildMonthState(getCurrentYM(), 30000, true);
+
+        let currentMonthId = getCurrentYM();
+        let monthsMap = {};
+        let appState = loadState();
+
+        function ensureMonth(monthId, seedData = null) {
+            if (!monthsMap[monthId]) {
+                monthsMap[monthId] = seedData
+                    ? JSON.parse(JSON.stringify(seedData))
+                    : buildMonthState(monthId, 0, false);
+                monthsMap[monthId].monthId = monthId;
+                monthsMap[monthId].monthLabel = formatThaiMonth(monthId);
             }
-          });
-          if (!state.months[state.currentMonth]) {
-            const keys = Object.keys(state.months).sort().reverse();
-            if (keys.length > 0) state.currentMonth = keys[0];
-          }
-          saveLocal();
-          renderAll();
-          setStatus("ซิงก์ข้อมูลจาก Google Sheets แล้ว");
-        } else {
-          setStatus("พร้อมใช้งาน");
+            return monthsMap[monthId];
         }
-      } catch (err) {
-        setStatus("ใช้งานข้อมูลในเครื่อง (รอเชื่อมต่อชีท)");
-      }
-    }
 
-    loadLocal();
-    renderAll();
-    loadFromSheet();
-  </script>
+        // --- Persistence Functions ---
+        function loadState() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.monthsMap && typeof parsed.monthsMap === 'object') {
+                        monthsMap = parsed.monthsMap;
+                        currentMonthId = parsed.currentMonthId || getCurrentYM();
+                        return ensureMonth(currentMonthId, DEFAULT_STATE);
+                    }
+                    if (parsed && Array.isArray(parsed.categories)) {
+                        const mId = getCurrentYM();
+                        monthsMap[mId] = {
+                            monthId: mId,
+                            monthLabel: formatThaiMonth(mId),
+                            income: Number(parsed.income) || 0,
+                            categories: parsed.categories
+                        };
+                        currentMonthId = mId;
+                        return monthsMap[mId];
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading saved state:', e);
+            }
+            const initial = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            monthsMap[currentMonthId] = initial;
+            return initial;
+        }
+
+        function saveState() {
+            try {
+                monthsMap[currentMonthId] = appState;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    currentMonthId: currentMonthId,
+                    monthsMap: monthsMap
+                }));
+            } catch (e) {
+                console.error('Error saving state:', e);
+            }
+        }
+
+        // --- Month Selector, Add Month & History ---
+        function renderMonthSelector() {
+            const sel = document.getElementById('monthSelector');
+            if (!sel) return;
+            const keys = Object.keys(monthsMap).sort().reverse();
+            sel.innerHTML = keys.map(k => {
+                const lbl = monthsMap[k]?.monthLabel || formatThaiMonth(k);
+                return `<option value="${escapeHTML(k)}" ${k === currentMonthId ? 'selected' : ''}>${escapeHTML(lbl)}</option>`;
+            }).join('');
+        }
+
+        function switchMonth(monthId) {
+            if (!monthId) return;
+            monthsMap[currentMonthId] = appState;
+            currentMonthId = monthId;
+            appState = ensureMonth(monthId);
+            saveState();
+            renderAll();
+            showToast(`เปลี่ยนไปเดือน ${appState.monthLabel}`);
+        }
+
+        function openNewMonthModal() {
+            const modal = document.getElementById('newMonthModal');
+            const picker = document.getElementById('newMonthPicker');
+            picker.value = getCurrentYM();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeNewMonthModal() {
+            const modal = document.getElementById('newMonthModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function confirmAddMonth() {
+            const picker = document.getElementById('newMonthPicker');
+            const monthId = (picker.value || '').trim();
+            if (!/^\d{4}-\d{2}$/.test(monthId)) {
+                showToast('กรุณาเลือกเดือนและปีให้ถูกต้อง', 'error');
+                return;
+            }
+            const copyCat = document.getElementById('copyStructureCheck').checked;
+            monthsMap[currentMonthId] = appState;
+
+            if (!monthsMap[monthId]) {
+                const created = buildMonthState(monthId, copyCat ? (Number(appState.income) || 0) : 0, false);
+                if (copyCat && Array.isArray(appState.categories)) {
+                    created.categories = appState.categories.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        subtitle: c.subtitle,
+                        icon: c.icon,
+                        colorId: c.colorId,
+                        percent: Number(c.percent) || 0,
+                        items: []
+                    }));
+                }
+                monthsMap[monthId] = created;
+            }
+
+            currentMonthId = monthId;
+            appState = monthsMap[monthId];
+            saveState();
+            closeNewMonthModal();
+            renderAll();
+            showToast(`สร้างเดือน ${appState.monthLabel} แล้ว`);
+        }
+
+        function openHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            renderHistory();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function renderHistory() {
+            monthsMap[currentMonthId] = appState;
+            const tbody = document.getElementById('historyTableBody');
+            if (!tbody) return;
+
+            const keys = Object.keys(monthsMap).sort().reverse();
+            let sumInc = 0;
+            let sumExp = 0;
+            let sumRem = 0;
+
+            tbody.innerHTML = keys.map(k => {
+                const m = monthsMap[k];
+                const inc = Number(m.income) || 0;
+                const exp = (m.categories || []).reduce(
+                    (s, c) => s + (c.items || []).reduce((si, it) => si + (Number(it.amount) || 0), 0),
+                    0
+                );
+                const rem = inc - exp;
+
+                sumInc += inc;
+                sumExp += exp;
+                sumRem += rem;
+
+                const remClass = rem < 0 ? 'text-rose-600' : 'text-emerald-600';
+                const currentTag = k === currentMonthId
+                    ? '<span class="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">เดือนปัจจุบัน</span>'
+                    : '';
+
+                return `
+                    <tr onclick="switchMonth('${escapeHTML(k)}'); closeHistoryModal();" class="hover:bg-slate-50 cursor-pointer transition">
+                        <td class="py-3 px-4 font-medium text-slate-800">${escapeHTML(m.monthLabel || formatThaiMonth(k))}${currentTag}</td>
+                        <td class="py-3 px-4 text-right font-num text-slate-700">${formatCurrency(inc)}</td>
+                        <td class="py-3 px-4 text-right font-num text-rose-600">${formatCurrency(exp)}</td>
+                        <td class="py-3 px-4 text-right font-num font-bold ${remClass}">${formatCurrency(rem)}</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="text-xs font-semibold text-sky-600 hover:underline">เปิดดู</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('histAllIncome').textContent = formatCurrency(sumInc);
+            document.getElementById('histAllExpense').textContent = formatCurrency(sumExp);
+            const allRemEl = document.getElementById('histAllRemaining');
+            allRemEl.textContent = formatCurrency(sumRem);
+            allRemEl.className = `text-lg font-bold font-num mt-0.5 ${sumRem < 0 ? 'text-rose-600' : 'text-emerald-700'}`;
+        }
+
+        // --- Google Sheets Sync ---
+        function setSheetStatusText(msg, colorClass = 'text-slate-400') {
+            const el = document.getElementById('sheetSyncStatus');
+            if (!el) return;
+            el.className = `text-xs ${colorClass}`;
+            el.textContent = msg;
+        }
+
+        async function saveToGoogleSheets() {
+            const btn = document.getElementById('btnSaveSheets');
+            if (btn) btn.disabled = true;
+            saveState();
+            setSheetStatusText('กำลังบันทึกลงชีท...', 'text-sky-600');
+
+            const inc = Number(appState.income) || 0;
+            const totalExpense = (appState.categories || []).reduce(
+                (s, c) => s + (c.items || []).reduce((si, it) => si + (Number(it.amount) || 0), 0),
+                0
+            );
+
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    body: JSON.stringify({
+                        monthId: appState.monthId || currentMonthId,
+                        monthLabel: appState.monthLabel || formatThaiMonth(currentMonthId),
+                        income: inc,
+                        totalExpense: totalExpense,
+                        netBalance: inc - totalExpense,
+                        payload: appState
+                    })
+                });
+                const text = await res.text();
+                const json = JSON.parse(text);
+                if (json.status === 'success') {
+                    setSheetStatusText(`ซิงก์ชีทแล้ว (${json.updatedAt || 'สำเร็จ'})`, 'text-emerald-600');
+                    showToast(`บันทึกลง Google Sheets (${appState.monthLabel}) เรียบร้อยแล้ว`);
+                } else {
+                    setSheetStatusText('บันทึกชีทไม่สำเร็จ', 'text-rose-600');
+                    showToast('บันทึกชีทไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Apps Script', 'error');
+                }
+            } catch (err) {
+                console.error('saveToGoogleSheets error:', err);
+                setSheetStatusText('บันทึกในเครื่องแล้ว', 'text-amber-600');
+                showToast('บันทึกในเครื่องแล้ว แต่เชื่อมต่อ Google Sheets ไม่ได้', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function loadFromGoogleSheets(notify = false) {
+            setSheetStatusText('กำลังดึงข้อมูลจากชีท...', 'text-sky-600');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10000);
+
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal, redirect: 'follow' });
+                const text = await res.text();
+                const json = JSON.parse(text);
+                if (json.status === 'success' && Array.isArray(json.data)) {
+                    let synced = 0;
+                    json.data.forEach(row => {
+                        if (row && row.monthId && row.payload && Array.isArray(row.payload.categories)) {
+                            monthsMap[row.monthId] = {
+                                ...row.payload,
+                                monthId: row.monthId,
+                                monthLabel: row.payload.monthLabel || row.monthLabel || formatThaiMonth(row.monthId)
+                            };
+                            synced++;
+                        }
+                    });
+                    if (synced > 0) {
+                        if (!monthsMap[currentMonthId]) {
+                            const sorted = Object.keys(monthsMap).sort().reverse();
+                            if (sorted.length > 0) currentMonthId = sorted[0];
+                        }
+                        appState = monthsMap[currentMonthId];
+                        saveState();
+                        renderAll();
+                        if (document.getElementById('historyModal') && !document.getElementById('historyModal').classList.contains('hidden')) {
+                            renderHistory();
+                        }
+                    }
+                    setSheetStatusText('ซิงก์กับ Google Sheets แล้ว', 'text-emerald-600');
+                    if (notify) showToast('ดึงข้อมูลจาก Google Sheets เรียบร้อยแล้ว');
+                } else {
+                    setSheetStatusText('บันทึกอัตโนมัติ', 'text-slate-400');
+                }
+            } catch (err) {
+                console.warn('loadFromGoogleSheets warning:', err);
+                setSheetStatusText('บันทึกอัตโนมัติ', 'text-slate-400');
+                if (notify) showToast('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้ในขณะนี้', 'error');
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        // --- Formatting Helpers ---
+        function formatCurrency(num) {
+            const val = Number(num) || 0;
+            const isNegative = val < 0;
+            const absFormatted = Math.abs(val).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            return isNegative ? `-฿${absFormatted}` : `฿${absFormatted}`;
+        }
+
+        function formatNumberInput(num) {
+            if (num === 0 || num === '' || isNaN(num)) return '';
+            return Number(num).toLocaleString('en-US');
+        }
+
+        function parseNumber(str) {
+            if (typeof str === 'number') return str;
+            if (!str) return 0;
+            const cleaned = str.toString().replace(/,/g, '').trim();
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : Math.max(0, parsed);
+        }
+
+        function getColorObj(colorId) {
+            return COLOR_PALETTE.find(c => c.id === colorId) || COLOR_PALETTE[0];
+        }
+
+        // --- Income Handlers ---
+        function handleIncomeInput(el) {
+            let raw = el.value.replace(/[^0-9.]/g, '');
+            const parts = raw.split('.');
+            if (parts.length > 2) {
+                raw = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            const numericVal = parseFloat(raw) || 0;
+            appState.income = numericVal;
+
+            if (raw !== '') {
+                const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                el.value = parts.length > 1 ? `${intPart}.${parts[1]}` : intPart;
+            }
+
+            saveState();
+            updateCalculationsOnly();
+        }
+
+        function formatIncomeOnBlur(el) {
+            el.value = appState.income > 0 ? appState.income.toLocaleString('en-US') : '';
+        }
+
+        function setQuickIncome(amount) {
+            appState.income = amount;
+            const input = document.getElementById('incomeInput');
+            input.value = amount.toLocaleString('en-US');
+            saveState();
+            updateCalculationsOnly();
+            showToast(`ตั้งค่ารายได้เป็น ฿${amount.toLocaleString('en-US')}`);
+        }
+
+        // --- Category & Item Mutations ---
+        function updateCategoryPercent(catId, newPercentVal) {
+            const cat = appState.categories.find(c => c.id === catId);
+            if (!cat) return;
+            let val = parseFloat(newPercentVal);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 100) val = 100;
+            cat.percent = val;
+            saveState();
+            updateCalculationsOnly();
+        }
+
+        function updateCategoryName(catId, newName) {
+            const cat = appState.categories.find(c => c.id === catId);
+            if (!cat) return;
+            cat.name = newName.trim() || 'หมวดหมู่ไม่มีชื่อ';
+            saveState();
+            updateCalculationsOnly();
+        }
+
+        function addNewCategory() {
+            const nextColor = COLOR_PALETTE[appState.categories.length % COLOR_PALETTE.length];
+            const newCat = {
+                id: 'cat-' + Date.now(),
+                name: 'หมวดหมู่เพิ่มเติม',
+                subtitle: 'กำหนดรายการเอง',
+                icon: 'folder-plus',
+                colorId: nextColor.id,
+                percent: 0,
+                items: []
+            };
+            appState.categories.push(newCat);
+            saveState();
+            renderAll();
+            showToast('เพิ่มหมวดหมู่ใหม่เรียบร้อย');
+        }
+
+        function deleteCategory(catId) {
+            if (appState.categories.length <= 1) {
+                showToast('ต้องมีอย่างน้อย 1 หมวดหมู่หลัก', 'error');
+                return;
+            }
+            appState.categories = appState.categories.filter(c => c.id !== catId);
+            saveState();
+            renderAll();
+            showToast('ลบหมวดหมู่แล้ว');
+        }
+
+        function addExpenseItem(catId, event) {
+            if (event) event.preventDefault();
+            const nameInput = document.getElementById(`new-item-name-${catId}`);
+            const amountInput = document.getElementById(`new-item-amount-${catId}`);
+            
+            const itemName = nameInput.value.trim();
+            const itemAmount = parseNumber(amountInput.value);
+
+            if (!itemName) {
+                nameInput.focus();
+                showToast('กรุณากรอกชื่อรายการ', 'error');
+                return;
+            }
+            if (itemAmount <= 0) {
+                amountInput.focus();
+                showToast('กรุณากรอกจำนวนเงินมากกว่า 0', 'error');
+                return;
+            }
+
+            const cat = appState.categories.find(c => c.id === catId);
+            if (!cat) return;
+
+            cat.items.push({
+                id: 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                name: itemName,
+                amount: itemAmount
+            });
+
+            nameInput.value = '';
+            amountInput.value = '';
+            nameInput.focus();
+
+            saveState();
+            renderCategoryItems(catId);
+            updateCalculationsOnly();
+        }
+
+        function updateExpenseItem(catId, itemId, field, value) {
+            const cat = appState.categories.find(c => c.id === catId);
+            if (!cat) return;
+            const item = cat.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (field === 'name') {
+                item.name = value;
+            } else if (field === 'amount') {
+                item.amount = parseNumber(value);
+            }
+
+            saveState();
+            updateCalculationsOnly();
+        }
+
+        function deleteExpenseItem(catId, itemId) {
+            const cat = appState.categories.find(c => c.id === catId);
+            if (!cat) return;
+            cat.items = cat.items.filter(i => i.id !== itemId);
+            saveState();
+            renderCategoryItems(catId);
+            updateCalculationsOnly();
+        }
+
+        // --- Core Rendering & Calculation Engine ---
+        function renderAll() {
+            renderMonthSelector();
+
+            const incomeEl = document.getElementById('incomeInput');
+            incomeEl.value = appState.income > 0 ? appState.income.toLocaleString('en-US') : '';
+
+            const grid = document.getElementById('categoriesGrid');
+            grid.innerHTML = appState.categories.map(cat => createCategoryCardHTML(cat)).join('');
+
+            appState.categories.forEach(cat => renderCategoryItems(cat.id));
+
+            updateCalculationsOnly();
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        function createCategoryCardHTML(cat) {
+            const color = getColorObj(cat.colorId);
+            return `
+                <div id="card-${cat.id}" class="bg-white rounded-3xl border border-slate-100 card-shadow flex flex-col justify-between overflow-hidden transition-all">
+                    <div>
+                        <!-- Card Top Header -->
+                        <div class="p-5 pb-4 ${color.bg} border-b ${color.border}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <div class="w-10 h-10 rounded-2xl ${color.iconBg} text-white flex items-center justify-center shrink-0 shadow-xs">
+                                        <i data-lucide="${cat.icon || 'layers'}" class="w-5 h-5"></i>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <input 
+                                            type="text" 
+                                            value="${escapeHTML(cat.name)}" 
+                                            onchange="updateCategoryName('${cat.id}', this.value)"
+                                            class="font-bold text-base sm:text-lg text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-slate-600 focus:outline-none w-full truncate"
+                                            title="คลิกเพื่อแก้ไขชื่อหมวดหมู่"
+                                        >
+                                        <p class="text-xs text-slate-500 truncate">${escapeHTML(cat.subtitle || 'รายการค่าใช้จ่าย')}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Percentage Input Box -->
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <div class="relative flex items-center bg-white border ${color.border} rounded-xl px-2.5 py-1.5 shadow-2xs">
+                                        <input 
+                                            type="number" 
+                                            step="any" 
+                                            min="0" 
+                                            max="100"
+                                            value="${cat.percent}" 
+                                            oninput="updateCategoryPercent('${cat.id}', this.value)"
+                                            class="w-12 text-right font-bold font-num text-base text-slate-800 focus:outline-none bg-transparent"
+                                        >
+                                        <span class="text-xs font-bold ${color.text} ml-1">%</span>
+                                    </div>
+                                    ${appState.categories.length > 1 ? `
+                                        <button type="button" onclick="deleteCategory('${cat.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white/80 rounded-lg transition" title="ลบหมวดหมู่นี้">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <!-- Allocated Budget Display -->
+                            <div class="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                                <span class="text-xs font-medium text-slate-600">งบประมาณตามสัดส่วน (${cat.percent}%):</span>
+                                <span id="cat-budget-${cat.id}" class="text-lg font-bold font-num ${color.text}">฿0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Expense Items List -->
+                        <div class="p-5 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">รายการที่ต้องจ่าย</span>
+                                <span id="cat-item-count-${cat.id}" class="text-xs text-slate-400 font-num">0 รายการ</span>
+                            </div>
+
+                            <div id="items-list-${cat.id}" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                <!-- Dynamic items injected here -->
+                            </div>
+
+                            <!-- Add New Item Form -->
+                            <form onsubmit="addExpenseItem('${cat.id}', event)" class="pt-2 flex flex-col sm:flex-row gap-2">
+                                <input 
+                                    type="text" 
+                                    id="new-item-name-${cat.id}"
+                                    placeholder="ชื่อรายการ (เช่น ค่าไฟ, ออมเงิน)" 
+                                    class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition"
+                                >
+                                <div class="flex gap-2">
+                                    <div class="relative flex-1 sm:w-32">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">฿</span>
+                                        <input 
+                                            type="number" 
+                                            step="any"
+                                            min="0"
+                                            id="new-item-amount-${cat.id}"
+                                            placeholder="จำนวนเงิน" 
+                                            class="w-full pl-7 pr-3 py-2 text-sm font-num bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition"
+                                        >
+                                    </div>
+                                    <button type="submit" class="px-3.5 py-2 ${color.iconBg} hover:opacity-90 text-white text-sm font-medium rounded-xl transition flex items-center justify-center gap-1 shrink-0 shadow-2xs">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                        <span>เพิ่ม</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer: Spent vs Remaining -->
+                    <div class="px-5 py-4 bg-slate-50/90 border-t border-slate-100 space-y-2.5">
+                        <!-- Progress Bar -->
+                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div id="cat-progress-${cat.id}" class="h-full ${color.bar} transition-all duration-300" style="width: 0%"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs">
+                            <div>
+                                <span class="text-slate-500">ใช้ไปรวม: </span>
+                                <span id="cat-spent-${cat.id}" class="font-bold font-num text-slate-700">฿0.00</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-slate-500">เหลือ: </span>
+                                <span id="cat-remaining-${cat.id}" class="font-bold font-num text-sm text-emerald-600">฿0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCategoryItems(catId) {
+            const cat = appState.categories.find(c => c.id === catId);
+            if (!cat) return;
+
+            const listEl = document.getElementById(`items-list-${catId}`);
+            const countEl = document.getElementById(`cat-item-count-${catId}`);
+            if (!listEl) return;
+
+            countEl.textContent = `${cat.items.length} รายการ`;
+
+            if (cat.items.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-4 px-3 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                        ยังไม่มีรายการในหมวดนี้ เพิ่มรายการด้านล่างได้เลย
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = cat.items.map(item => `
+                <div class="group flex items-center gap-2 p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/80 border border-slate-100 transition">
+                    <input 
+                        type="text" 
+                        value="${escapeHTML(item.name)}"
+                        onchange="updateExpenseItem('${cat.id}', '${item.id}', 'name', this.value)"
+                        class="flex-1 min-w-0 text-sm text-slate-700 bg-transparent focus:bg-white focus:px-2 focus:py-0.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    >
+                    <div class="relative w-28 shrink-0">
+                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">฿</span>
+                        <input 
+                            type="number" 
+                            step="any"
+                            min="0"
+                            value="${item.amount}"
+                            oninput="updateExpenseItem('${cat.id}', '${item.id}', 'amount', this.value)"
+                            class="w-full pl-6 pr-2 py-1 text-right text-sm font-semibold font-num text-slate-800 bg-white border border-slate-200/80 rounded-lg focus:outline-none focus:border-sky-500"
+                        >
+                    </div>
+                    <button 
+                        type="button"
+                        onclick="deleteExpenseItem('${cat.id}', '${item.id}')" 
+                        class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition shrink-0"
+                        title="ลบรายการ"
+                    >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        function updateCalculationsOnly() {
+            const income = appState.income || 0;
+            let totalPercent = 0;
+            let totalAllocatedMoney = 0;
+            let totalSpentMoney = 0;
+            let totalRemainingSum = 0;
+
+            const tableRowsHTML = [];
+            const stackedBarHTML = [];
+
+            appState.categories.forEach(cat => {
+                const color = getColorObj(cat.colorId);
+                const pct = Number(cat.percent) || 0;
+                const allocated = (income * pct) / 100;
+                const spent = cat.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+                const remaining = allocated - spent;
+
+                totalPercent += pct;
+                totalAllocatedMoney += allocated;
+                totalSpentMoney += spent;
+                totalRemainingSum += remaining;
+
+                const budgetEl = document.getElementById(`cat-budget-${cat.id}`);
+                if (budgetEl) {
+                    const labelEl = budgetEl.previousElementSibling;
+                    if (labelEl) labelEl.textContent = `งบประมาณตามสัดส่วน (${pct}%):`;
+                    budgetEl.textContent = formatCurrency(allocated);
+                }
+
+                const spentEl = document.getElementById(`cat-spent-${cat.id}`);
+                const remEl = document.getElementById(`cat-remaining-${cat.id}`);
+                const progEl = document.getElementById(`cat-progress-${cat.id}`);
+
+                if (spentEl) spentEl.textContent = formatCurrency(spent);
+                if (remEl) {
+                    remEl.textContent = formatCurrency(remaining);
+                    if (remaining < 0) {
+                        remEl.className = 'font-bold font-num text-sm text-rose-600';
+                    } else if (remaining === 0 && allocated > 0) {
+                        remEl.className = 'font-bold font-num text-sm text-slate-600';
+                    } else {
+                        remEl.className = 'font-bold font-num text-sm text-emerald-600';
+                    }
+                }
+
+                if (progEl) {
+                    let ratio = 0;
+                    if (allocated > 0) {
+                        ratio = Math.min(100, (spent / allocated) * 100);
+                    } else if (spent > 0) {
+                        ratio = 100;
+                    }
+                    progEl.style.width = `${ratio}%`;
+                    progEl.className = `h-full transition-all duration-300 ${remaining < 0 ? 'bg-rose-500' : color.bar}`;
+                }
+
+                if (pct > 0) {
+                    stackedBarHTML.push(`
+                        <div style="width: ${Math.min(100, pct)}%" class="h-full ${color.bar} first:rounded-l-full last:rounded-r-full transition-all duration-300" title="${escapeHTML(cat.name)}: ${pct}%"></div>
+                    `);
+                }
+
+                const remColorClass = remaining < 0 ? 'text-rose-600' : 'text-emerald-600';
+                tableRowsHTML.push(`
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3 px-3 font-medium text-slate-800 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full ${color.bar} shrink-0"></span>
+                            <span>${escapeHTML(cat.name)}</span>
+                        </td>
+                        <td class="py-3 px-3 text-right font-num text-slate-600">${pct}%</td>
+                        <td class="py-3 px-3 text-right font-num font-medium text-slate-800">${formatCurrency(allocated)}</td>
+                        <td class="py-3 px-3 text-right font-num text-slate-600">${formatCurrency(spent)}</td>
+                        <td class="py-3 px-3 text-right font-num font-bold ${remColorClass}">${formatCurrency(remaining)}</td>
+                    </tr>
+                `);
+            });
+
+            const roundedPercent = Math.round(totalPercent * 100) / 100;
+            const badgeEl = document.getElementById('totalPercentBadge');
+            const alertEl = document.getElementById('percentAlertMsg');
+            const barEl = document.getElementById('percentStackedBar');
+
+            badgeEl.textContent = `${roundedPercent}%`;
+            barEl.innerHTML = stackedBarHTML.join('');
+
+            if (roundedPercent === 100) {
+                badgeEl.className = 'text-xs font-bold font-num px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
+                alertEl.className = 'text-xs mt-2 text-emerald-600 flex items-center gap-1';
+                alertEl.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i><span>จัดสรรครบ 100% พอดีแล้ว</span>`;
+            } else if (roundedPercent < 100) {
+                const diff = Math.round((100 - roundedPercent) * 100) / 100;
+                badgeEl.className = 'text-xs font-bold font-num px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700';
+                alertEl.className = 'text-xs mt-2 text-amber-600 flex items-center gap-1';
+                alertEl.innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i><span>ยังเหลือสัดส่วนอีก <b>${diff}%</b> (${formatCurrency((income * diff) / 100)}) ที่ยังไม่ได้จัดสรร</span>`;
+            } else {
+                const over = Math.round((roundedPercent - 100) * 100) / 100;
+                badgeEl.className = 'text-xs font-bold font-num px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700';
+                alertEl.className = 'text-xs mt-2 text-rose-600 flex items-center gap-1';
+                alertEl.innerHTML = `<i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i><span>สัดส่วนเกิน 100% ไป <b>${over}%</b> กรุณาปรับลดเปอร์เซ็นต์ลง</span>`;
+            }
+
+            document.getElementById('summaryAllocated').textContent = formatCurrency(totalAllocatedMoney);
+            document.getElementById('summaryUnallocatedHint').textContent = `คิดเป็น ${roundedPercent}% ของรายได้`;
+            document.getElementById('summaryTotalExpenses').textContent = formatCurrency(totalSpentMoney);
+
+            const netCard = document.getElementById('netRemainingCard');
+            const netValEl = document.getElementById('summaryNetRemaining');
+            const diffEl = document.getElementById('summaryIncomeDiff');
+
+            netValEl.textContent = formatCurrency(totalRemainingSum);
+            const incomeMinusExpenses = income - totalSpentMoney;
+            diffEl.textContent = `รายได้หักรายจ่ายจริง: ${formatCurrency(incomeMinusExpenses)}`;
+
+            if (totalRemainingSum < 0) {
+                netCard.className = 'sm:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200/80 flex items-center justify-between';
+                netValEl.className = 'text-2xl sm:text-3xl font-bold font-num text-rose-600';
+                diffEl.className = 'text-[11px] font-num text-rose-600 mt-0.5';
+            } else {
+                netCard.className = 'sm:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/70 flex items-center justify-between';
+                netValEl.className = 'text-2xl sm:text-3xl font-bold font-num text-emerald-700';
+                diffEl.className = 'text-[11px] font-num text-emerald-600 mt-0.5';
+            }
+
+            document.getElementById('summaryTableBody').innerHTML = tableRowsHTML.join('');
+            const footRemClass = totalRemainingSum < 0 ? 'text-rose-600' : 'text-emerald-700';
+            document.getElementById('summaryTableFoot').innerHTML = `
+                <tr>
+                    <td class="py-3.5 px-3">รวมทั้งหมด</td>
+                    <td class="py-3.5 px-3 text-right font-num">${roundedPercent}%</td>
+                    <td class="py-3.5 px-3 text-right font-num">${formatCurrency(totalAllocatedMoney)}</td>
+                    <td class="py-3.5 px-3 text-right font-num">${formatCurrency(totalSpentMoney)}</td>
+                    <td class="py-3.5 px-3 text-right font-num ${footRemClass}">${formatCurrency(totalRemainingSum)}</td>
+                </tr>
+            `;
+
+            renderDonutChart(income, totalSpentMoney);
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        function renderDonutChart(income, totalSpent) {
+            const svg = document.getElementById('donutChart');
+            const percentUsedEl = document.getElementById('donutPercentUsed');
+            
+            const usedRatio = income > 0 ? Math.round((totalSpent / income) * 100) : 0;
+            percentUsedEl.textContent = `${usedRatio}%`;
+
+            const radius = 38;
+            const circumference = 2 * Math.PI * radius;
+            let cumulativePercent = 0;
+
+            let circlesHTML = `<circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#f1f5f9" stroke-width="14"></circle>`;
+
+            appState.categories.forEach(cat => {
+                const pct = Number(cat.percent) || 0;
+                if (pct <= 0) return;
+
+                const color = getColorObj(cat.colorId);
+                const drawPct = Math.min(pct, Math.max(0, 100 - cumulativePercent));
+                if (drawPct <= 0) return;
+
+                const strokeDasharray = `${(drawPct / 100) * circumference} ${circumference}`;
+                const strokeDashoffset = -((cumulativePercent / 100) * circumference);
+
+                circlesHTML += `
+                    <circle 
+                        cx="50" 
+                        cy="50" 
+                        r="${radius}" 
+                        fill="transparent" 
+                        stroke="${color.hex}" 
+                        stroke-width="14"
+                        stroke-dasharray="${strokeDasharray}"
+                        stroke-dashoffset="${strokeDashoffset}"
+                        class="transition-all duration-300"
+                    ></circle>
+                `;
+
+                cumulativePercent += drawPct;
+            });
+
+            svg.innerHTML = circlesHTML;
+        }
+
+        // --- Utility Features: Sample Data, Reset, Copy Summary ---
+        function loadSampleData() {
+            appState = buildMonthState(currentMonthId, 30000, true);
+            saveState();
+            renderAll();
+            showToast('โหลดข้อมูลตัวอย่างเรียบร้อยแล้ว');
+        }
+
+        function openResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function confirmReset() {
+            appState = buildMonthState(currentMonthId, 0, false);
+            saveState();
+            renderAll();
+            closeResetModal();
+            showToast('ล้างข้อมูลทั้งหมดเรียบร้อย');
+        }
+
+        function copySummaryText() {
+            const income = appState.income || 0;
+            let lines = [
+                `📊 สรุปการจัดสรรค่าใช้จ่าย (${appState.monthLabel})`,
+                `💰 รายได้เดือนนี้: ${formatCurrency(income)}`,
+                `--------------------------------`
+            ];
+
+            let totalSpent = 0;
+            let totalRem = 0;
+
+            appState.categories.forEach(cat => {
+                const allocated = (income * cat.percent) / 100;
+                const spent = cat.items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                const rem = allocated - spent;
+                totalSpent += spent;
+                totalRem += rem;
+
+                lines.push(`📌 ${cat.name} (${cat.percent}%): งบ ${formatCurrency(allocated)}`);
+                if (cat.items.length > 0) {
+                    cat.items.forEach(item => {
+                        lines.push(`   - ${item.name}: ${formatCurrency(item.amount)}`);
+                    });
+                }
+                lines.push(`   ▶ จ่ายรวม ${formatCurrency(spent)} | คงเหลือ ${formatCurrency(rem)}`);
+            });
+
+            lines.push(`--------------------------------`);
+            lines.push(`🧾 รายจ่ายรวมทั้งหมด: ${formatCurrency(totalSpent)}`);
+            lines.push(`✅ ยอดคงเหลือสุทธิรวม: ${formatCurrency(totalRem)}`);
+
+            const textToCopy = lines.join('\n');
+
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('คัดลอกสรุปยอดลงคลิปบอร์ดแล้ว!');
+            } catch (err) {
+                showToast('ไม่สามารถคัดลอกข้อความได้', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white';
+            const iconName = type === 'error' ? 'alert-circle' : 'check-circle-2';
+
+            toast.className = `${bgClass} px-4 py-3 rounded-2xl shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2 toast-enter pointer-events-auto`;
+            toast.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4 shrink-0"></i><span>${escapeHTML(message)}</span>`;
+
+            container.appendChild(toast);
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                toast.style.transition = 'all 0.25s ease';
+                setTimeout(() => toast.remove(), 250);
+            }, 2600);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Initialize App on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderAll();
+            loadFromGoogleSheets(false);
+        });
+    </script>
 </body>
 </html>
